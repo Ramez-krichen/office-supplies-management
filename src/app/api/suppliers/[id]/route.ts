@@ -1,0 +1,214 @@
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
+import { db as prisma } from '@/lib/db'
+import { checkAccess, createFeatureAccessCheck } from '@/lib/server-access-control'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+// GET /api/suppliers/[id] - Get supplier by ID
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const accessCheck = await checkAccess(createFeatureAccessCheck('SUPPLIERS', 'view')())
+    if (!accessCheck.hasAccess) {
+      return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
+    }
+
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: params.id },
+      include: {
+        items: true,
+        purchaseOrders: {
+          orderBy: { orderDate: 'desc' }
+        }
+      }
+    })
+
+    if (!supplier) {
+      return NextResponse.json({ error: 'Supplier not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(supplier)
+  } catch (error) {
+    console.error('Error fetching supplier:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch supplier' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT /api/suppliers/[id] - Update supplier
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const accessCheck = await checkAccess(createFeatureAccessCheck('SUPPLIERS', 'edit')())
+    if (!accessCheck.hasAccess) {
+      return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
+    }
+
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const {
+      name,
+      email,
+      phone,
+      address,
+      contactPerson
+    } = body
+    
+    const supplierId = params.id
+
+    // Check if supplier exists
+    const existingSupplier = await prisma.supplier.findUnique({
+      where: { id: supplierId }
+    })
+
+    if (!existingSupplier) {
+      return NextResponse.json({ error: 'Supplier not found' }, { status: 404 })
+    }
+
+    // Check if name is being changed and if it already exists
+    if (name && name !== existingSupplier.name) {
+      const duplicateSupplier = await prisma.supplier.findFirst({
+        where: { 
+          name,
+          id: { not: supplierId }
+        }
+      })
+
+      if (duplicateSupplier) {
+        return NextResponse.json(
+          { error: 'Supplier with this name already exists' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Validate required fields
+    if (!name) {
+      return NextResponse.json(
+        { error: 'Supplier name is required' },
+        { status: 400 }
+      )
+    }
+
+    try {
+      const updatedSupplier = await prisma.supplier.update({
+        where: { id: supplierId },
+        data: {
+          name,
+          email: email || null,
+          phone: phone || null,
+          address: address || null,
+          contactPerson: contactPerson || null
+        }
+      })
+
+      // Create audit log
+      await prisma.auditLog.create({
+        data: {
+          action: 'UPDATE',
+          entity: 'Supplier',
+          entityId: updatedSupplier.id,
+          performedBy: session.user.id,
+          details: `Updated supplier: ${updatedSupplier.name}`
+        }
+      })
+
+      return NextResponse.json(updatedSupplier)
+    } catch (updateError) {
+      console.error('Error in database update operation:', updateError)
+      return NextResponse.json(
+        { error: 'Database error while updating supplier' },
+        { status: 500 }
+      )
+    }
+  } catch (error) {
+    console.error('Error updating supplier:', error)
+    return NextResponse.json(
+      { error: 'Failed to update supplier' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE /api/suppliers/[id] - Delete supplier
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const accessCheck = await checkAccess(createFeatureAccessCheck('SUPPLIERS', 'delete')())
+    if (!accessCheck.hasAccess) {
+      return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
+    }
+
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const supplierId = params.id
+
+    // Check if supplier exists
+    const existingSupplier = await prisma.supplier.findUnique({
+      where: { id: supplierId }
+    })
+
+    if (!existingSupplier) {
+      return NextResponse.json({ error: 'Supplier not found' }, { status: 404 })
+    }
+
+    // Check if supplier has items or purchase orders
+    const [itemCount, orderCount] = await Promise.all([
+      prisma.item.count({ where: { supplierId: supplierId } }),
+      prisma.purchaseOrder.count({ where: { supplierId: supplierId } })
+    ])
+
+    if (itemCount > 0 || orderCount > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot delete supplier with existing items or purchase orders',
+          details: {
+            itemCount,
+            orderCount
+          }
+        },
+        { status: 400 }
+      )
+    }
+
+    // Safe to delete
+    const deletedSupplier = await prisma.supplier.delete({
+      where: { id: supplierId }
+    })
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        action: 'DELETE',
+        entity: 'Supplier',
+        entityId: deletedSupplier.id,
+        performedBy: session.user.id,
+        details: `Deleted supplier: ${deletedSupplier.name}`
+      }
+    })
+
+    return NextResponse.json({ message: 'Supplier deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting supplier:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete supplier' },
+      { status: 500 }
+    )
+  }
+}

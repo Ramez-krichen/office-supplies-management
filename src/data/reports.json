@@ -1,0 +1,94 @@
+{
+  "overview": {
+    "totalItems": 150,
+    "activeItems": 113,
+    "lowStockItems": 7,
+    "outOfStockItems": 1,
+    "totalInventoryValue": 3884563.01,
+    "totalOrders": 50,
+    "pendingOrders": 7,
+    "monthlySpending": 401748.07
+  },
+  "categorySpending": {
+    "Writing Supplies": 482921.72000000003,
+    "Paper Products": 889100.9299999999,
+    "Office Equipment": 339430.52,
+    "Technology": 669209.6900000001,
+    "Storage & Organization": 398382.94,
+    "Cleaning Supplies": 440438.55,
+    "Break Room Supplies": 665078.66
+  },
+  "monthlyTrend": [
+    {
+      "month": "2025-07",
+      "amount": 401748.07
+    },
+    {
+      "month": "2025-06",
+      "amount": 0
+    },
+    {
+      "month": "2025-05",
+      "amount": 0
+    },
+    {
+      "month": "2025-04",
+      "amount": 0
+    },
+    {
+      "month": "2025-03",
+      "amount": 0
+    },
+    {
+      "month": "2025-02",
+      "amount": 0
+    },
+    {
+      "month": "2025-01",
+      "amount": 0
+    },
+    {
+      "month": "2024-12",
+      "amount": 0
+    },
+    {
+      "month": "2024-11",
+      "amount": 0
+    },
+    {
+      "month": "2024-10",
+      "amount": 0
+    },
+    {
+      "month": "2024-09",
+      "amount": 0
+    },
+    {
+      "month": "2024-08",
+      "amount": 0
+    }
+  ],
+  "topSuppliers": [
+    {
+      "name": "W.B. Mason",
+      "amount": 46258.99
+    },
+    {
+      "name": "Office Essentials",
+      "amount": 46225.65
+    },
+    {
+      "name": "Viking Direct",
+      "amount": 39146.92
+    },
+    {
+      "name": "Discount Office Items",
+      "amount": 33760.81
+    },
+    {
+      "name": "Office Zone",
+      "amount": 28801.35
+    }
+  ],
+  "lastUpdated": "2025-07-25T13:58:54.963877"
+}

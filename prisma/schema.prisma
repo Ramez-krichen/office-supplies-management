@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./comprehensive.db"
+}
+
+model Department {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  description String?
+  parentId    String?
+  managerId   String?
+  budget      Float?
+  status      String       @default("ACTIVE")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  manager     User?        @relation("DepartmentManager", fields: [managerId], references: [id])
+  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentHierarchy")
+  users       User[]       @relation("DepartmentUsers")
+
+  @@index([code])
+  @@index([parentId])
+  @@index([managerId])
+  @@index([status])
+  @@map("departments")
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  email              String          @unique
+  name               String?
+  password           String
+  role               String          @default("EMPLOYEE")
+  departmentId       String?
+  department         String?
+  status             String          @default("ACTIVE")
+  permissions        String          @default("")
+  lastSignIn         DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  approvals          Approval[]
+  auditLogs          AuditLog[]
+  managedDepartments Department[]    @relation("DepartmentManager")
+  purchaseOrders     PurchaseOrder[]
+  requests           Request[]
+  returns            Return[]
+  processedReturns   Return[]        @relation("ProcessedReturns")
+  stockMovements     StockMovement[]
+  departmentRef      Department?     @relation("DepartmentUsers", fields: [departmentId], references: [id])
+
+  @@index([departmentId])
+  @@index([role])
+  @@index([status])
+  @@index([email])
+  @@map("users")
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  contactPerson  String?
+  contactTitle   String?
+  website        String?
+  taxId          String?
+  paymentTerms   String?
+  notes          String?
+  status         String          @default("ACTIVE")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  items          Item[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  parentId    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  items       Item[]
+
+  @@map("categories")
+}
+
+model Item {
+  id              String           @id @default(cuid())
+  reference       String           @unique
+  name            String
+  description     String?
+  unit            String
+  price           Float
+  minStock        Int              @default(0)
+  currentStock    Int              @default(0)
+  categoryId      String
+  supplierId      String
+  isActive        Boolean          @default(true)
+  isEcoFriendly   Boolean          @default(false)
+  ecoRating       Int?
+  carbonFootprint Float?
+  recyclable      Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  demandForecasts DemandForecast[]
+  category        Category         @relation(fields: [categoryId], references: [id])
+  supplier        Supplier         @relation(fields: [supplierId], references: [id])
+  orderItems      OrderItem[]
+  requestItems    RequestItem[]
+  returns         Return[]
+  stockMovements  StockMovement[]
+
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([currentStock])
+  @@index([isActive])
+  @@index([name])
+  @@index([createdAt])
+  @@map("items")
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  status      String        @default("PENDING")
+  priority    String        @default("MEDIUM")
+  requesterId String
+  department  String?
+  totalAmount Float         @default(0)
+  attachments String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  approvals   Approval[]
+  items       RequestItem[]
+  requester   User          @relation(fields: [requesterId], references: [id])
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([createdAt])
+  @@index([priority])
+  @@index([department])
+  @@map("requests")
+}
+
+model RequestItem {
+  id         String  @id @default(cuid())
+  requestId  String
+  itemId     String
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  notes      String?
+  request    Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  item       Item    @relation(fields: [itemId], references: [id])
+
+  @@unique([requestId, itemId])
+  @@map("request_items")
+}
+
+model Approval {
+  id         String   @id @default(cuid())
+  requestId  String
+  approverId String
+  status     String   @default("PENDING")
+  comments   String?
+  level      Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approver   User     @relation(fields: [approverId], references: [id])
+
+  @@unique([requestId, approverId, level])
+  @@index([status])
+  @@index([approverId])
+  @@map("approvals")
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  itemId    String
+  type      String
+  quantity  Int
+  reason    String?
+  reference String?
+  userId    String
+  createdAt DateTime @default(now())
+  item      Item     @relation(fields: [itemId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([itemId])
+  @@index([createdAt])
+  @@index([type])
+  @@map("stock_movements")
+}
+
+model PurchaseOrder {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  supplierId   String
+  status       String      @default("DRAFT")
+  totalAmount  Float       @default(0)
+  orderDate    DateTime    @default(now())
+  expectedDate DateTime?
+  receivedDate DateTime?
+  notes        String?
+  createdById  String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
+  supplier     Supplier    @relation(fields: [supplierId], references: [id])
+  createdBy    User        @relation(fields: [createdById], references: [id])
+
+  @@index([status])
+  @@index([supplierId])
+  @@index([orderDate])
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("purchase_orders")
+}
+
+model OrderItem {
+  id               String        @id @default(cuid())
+  purchaseOrderId  String
+  itemId           String
+  quantity         Int
+  unitPrice        Float
+  totalPrice       Float
+  receivedQuantity Int           @default(0)
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  item             Item          @relation(fields: [itemId], references: [id])
+
+  @@unique([purchaseOrderId, itemId])
+  @@map("order_items")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  entity      String
+  entityId    String
+  performedBy String
+  timestamp   DateTime @default(now())
+  details     String?
+  user        User     @relation(fields: [performedBy], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Return {
+  id            String    @id @default(cuid())
+  returnNumber  String    @unique
+  itemId        String
+  quantity      Int
+  reason        String
+  condition     String
+  description   String?
+  requesterId   String
+  status        String    @default("PENDING")
+  returnDate    DateTime  @default(now())
+  processedDate DateTime?
+  processedBy   String?
+  refundAmount  Float?    @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  item          Item      @relation(fields: [itemId], references: [id])
+  requester     User      @relation(fields: [requesterId], references: [id])
+  processor     User?     @relation("ProcessedReturns", fields: [processedBy], references: [id])
+
+  @@map("returns")
+}
+
+model DemandForecast {
+  id              String   @id @default(cuid())
+  itemId          String
+  period          String
+  periodType      String
+  predictedDemand Int
+  actualDemand    Int?     @default(0)
+  confidence      Float
+  algorithm       String
+  factors         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  item            Item     @relation(fields: [itemId], references: [id])
+
+  @@unique([itemId, period, periodType])
+  @@map("demand_forecasts")
+}
+
+model Notification {
+  id           String    @id @default(cuid())
+  type         String
+  title        String
+  message      String
+  data         String?
+  status       String    @default("UNREAD")
+  priority     String    @default("MEDIUM")
+  targetRole   String?
+  targetUserId String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  readAt       DateTime?
+  dismissedAt  DateTime?
+
+  @@index([status])
+  @@index([targetRole])
+  @@index([targetUserId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("notifications")
+}

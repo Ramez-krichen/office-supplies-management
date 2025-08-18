@@ -1,0 +1,17 @@
+📊 Final Department User Count Check
+
+Department User Counts:
+Finance (FINANCE): 12 users
+Human Resources (HR): 9 users
+Information Technology (IT): 9 users
+Legal (LEGAL): 10 users
+Marketing (MKT): 15 users
+Operations (OPS): 9 users
+Procurement (PROC): 13 users
+Sales (SALES): 14 users
+Software Development (IT_DEV): 4 users
+
+Users with department but no departmentId: 0
+Total users in system: 95
+Users properly assigned to departments: 95
+Assignment rate: 100.0%

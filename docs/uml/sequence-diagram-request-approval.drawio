@@ -1,0 +1,218 @@
+<mxfile host="65bd71144e">
+    <diagram id="request-approval-sequence" name="Request Approval Workflow">
+        <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- Title -->
+                <mxCell id="title" value="Request Approval Workflow - Sequence Diagram" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="20" width="369" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- Actors -->
+                <mxCell id="employee" value="Employee" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+                    <mxGeometry x="80" y="80" width="30" height="60" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="system" value="System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+                    <mxGeometry x="250" y="80" width="120" height="60" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="manager" value="Manager" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="80" width="30" height="60" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="database" value="Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+                    <mxGeometry x="680" y="80" width="80" height="60" as="geometry"/>
+                </mxCell>
+                
+                <!-- Lifelines -->
+                <mxCell id="employee-lifeline" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+                    <mxGeometry x="90" y="160" width="10" height="600" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="system-lifeline" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+                    <mxGeometry x="305" y="160" width="10" height="600" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="manager-lifeline" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+                    <mxGeometry x="490" y="160" width="10" height="600" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="database-lifeline" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+                    <mxGeometry x="715" y="160" width="10" height="600" as="geometry"/>
+                </mxCell>
+                
+                <!-- Messages -->
+                <!-- 1. Create Request -->
+                <mxCell id="msg1" value="1: createRequest(title, items, priority)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="100" y="180" as="sourcePoint"/>
+                        <mxPoint x="305" y="180" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 2. Validate Request -->
+                <mxCell id="msg2" value="2: validateRequest()" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="200" as="sourcePoint"/>
+                        <mxPoint x="305" y="220" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="350" y="210"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 3. Save Request -->
+                <mxCell id="msg3" value="3: saveRequest(requestData)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="240" as="sourcePoint"/>
+                        <mxPoint x="715" y="240" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 4. Return Request ID -->
+                <mxCell id="msg4" value="4: requestId" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="715" y="260" as="sourcePoint"/>
+                        <mxPoint x="315" y="260" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 5. Check Approval Rules -->
+                <mxCell id="msg5" value="5: checkApprovalRules(requestAmount)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="280" as="sourcePoint"/>
+                        <mxPoint x="305" y="300" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="350" y="290"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 6. Send Notification -->
+                <mxCell id="msg6" value="6: sendApprovalNotification(managerId, requestId)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="320" as="sourcePoint"/>
+                        <mxPoint x="490" y="320" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 7. Confirmation -->
+                <mxCell id="msg7" value="7: requestCreated" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="305" y="340" as="sourcePoint"/>
+                        <mxPoint x="100" y="340" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Approval Phase -->
+                <mxCell id="approval-note" value="Approval Phase" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="380" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- 8. Review Request -->
+                <mxCell id="msg8" value="8: reviewRequest(requestId)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="490" y="420" as="sourcePoint"/>
+                        <mxPoint x="315" y="420" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 9. Get Request Details -->
+                <mxCell id="msg9" value="9: getRequestDetails(requestId)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="440" as="sourcePoint"/>
+                        <mxPoint x="715" y="440" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 10. Return Request Data -->
+                <mxCell id="msg10" value="10: requestData" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="715" y="460" as="sourcePoint"/>
+                        <mxPoint x="315" y="460" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 11. Display Request -->
+                <mxCell id="msg11" value="11: displayRequest(requestData)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="305" y="480" as="sourcePoint"/>
+                        <mxPoint x="500" y="480" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 12. Approve Request -->
+                <mxCell id="msg12" value="12: approveRequest(requestId, comments)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="490" y="520" as="sourcePoint"/>
+                        <mxPoint x="315" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 13. Update Request Status -->
+                <mxCell id="msg13" value="13: updateRequestStatus(requestId, APPROVED)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="540" as="sourcePoint"/>
+                        <mxPoint x="715" y="540" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 14. Create Approval Record -->
+                <mxCell id="msg14" value="14: createApproval(requestId, managerId, APPROVED)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="560" as="sourcePoint"/>
+                        <mxPoint x="715" y="560" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 15. Generate Purchase Order -->
+                <mxCell id="msg15" value="15: generatePurchaseOrder(requestId)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="580" as="sourcePoint"/>
+                        <mxPoint x="305" y="600" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="350" y="590"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 16. Save Purchase Order -->
+                <mxCell id="msg16" value="16: savePurchaseOrder(orderData)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="620" as="sourcePoint"/>
+                        <mxPoint x="715" y="620" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 17. Notify Employee -->
+                <mxCell id="msg17" value="17: notifyApprovalStatus(employeeId, APPROVED)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="640" as="sourcePoint"/>
+                        <mxPoint x="100" y="640" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- 18. Confirmation -->
+                <mxCell id="msg18" value="18: approvalComplete" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="305" y="680" as="sourcePoint"/>
+                        <mxPoint x="500" y="680" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Alternative Flow Note -->
+                <mxCell id="alt-note" value="Alternative Flow: Rejection" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+                    <mxGeometry x="800" y="520" width="120" height="60" as="geometry"/>
+                </mxCell>
+                
+                <!-- Legend -->
+                <mxCell id="legend" value="Legend:&#xa;→ Synchronous Call&#xa;⇢ Asynchronous Call&#xa;- - → Return Message" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="800" y="160" width="150" height="80" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

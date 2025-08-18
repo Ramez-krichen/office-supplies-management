@@ -1,0 +1,6 @@
+💰 Spending Data Check
+
+Requests: 1079
+Purchase Orders: 624
+Items: 38
+Suppliers: 10

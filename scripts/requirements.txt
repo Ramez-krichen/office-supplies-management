@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+prophet
+statsmodels
+sqlite3-utils
+pyodbc
+pymysql
+psycopg2-binary

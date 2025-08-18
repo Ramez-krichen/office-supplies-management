@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Dashboard Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-card {
+            display: inline-block;
+            width: 300px;
+            margin: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .metric-card:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .metric-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 8px;
+        }
+        .metric-change {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .clickable-hint {
+            font-size: 10px;
+            color: #007bff;
+            margin-top: 4px;
+        }
+        .test-info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="test-info">
+            <h2>System Dashboard Clickable Metrics Test</h2>
+            <p>This is a test page to demonstrate the clickable metrics functionality. In the actual application:</p>
+            <ul>
+                <li>✅ Metrics cards are now clickable with hover effects</li>
+                <li>✅ Click handlers open detailed modal popups</li>
+                <li>✅ API endpoints provide detailed data for each metric</li>
+                <li>✅ Modal components display comprehensive information</li>
+            </ul>
+            <p><strong>To test the actual implementation:</strong></p>
+            <ol>
+                <li>Navigate to <code>http://localhost:3000/dashboard/system</code></li>
+                <li>Login as an admin user</li>
+                <li>Click on any of the clickable metrics (Total Users, Inactive Users, Overactive Users, Total Requests, Purchase Orders)</li>
+                <li>View the detailed popup with comprehensive data</li>
+            </ol>
+        </div>
+
+        <h3>Clickable Metrics Preview:</h3>
+        
+        <div class="metric-card" onclick="showDemo('users')">
+            <div class="metric-title">Total Users</div>
+            <div class="metric-value">56</div>
+            <div class="metric-change">1 active</div>
+            <div class="clickable-hint">(Click for details)</div>
+        </div>
+
+        <div class="metric-card" onclick="showDemo('inactive')">
+            <div class="metric-title">Inactive Users</div>
+            <div class="metric-value">0</div>
+            <div class="metric-change">Not signed in for 30 days</div>
+            <div class="clickable-hint">(Click for details)</div>
+        </div>
+
+        <div class="metric-card" onclick="showDemo('overactive')">
+            <div class="metric-title">Overactive Users</div>
+            <div class="metric-value">1</div>
+            <div class="metric-change">More than 20 sign-ins this week</div>
+            <div class="clickable-hint">(Click for details)</div>
+        </div>
+
+        <div class="metric-card" onclick="showDemo('requests')">
+            <div class="metric-title">Total Requests</div>
+            <div class="metric-value">6,159</div>
+            <div class="metric-change">114 this week</div>
+            <div class="clickable-hint">(Click for details)</div>
+        </div>
+
+        <div class="metric-card" onclick="showDemo('orders')">
+            <div class="metric-title">Purchase Orders</div>
+            <div class="metric-value">1,419</div>
+            <div class="metric-change">998 this week</div>
+            <div class="clickable-hint">(Click for details)</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-title">System Health</div>
+            <div class="metric-value">Healthy</div>
+            <div class="metric-change">0.25% error rate</div>
+            <div style="font-size: 10px; color: #6c757d; margin-top: 4px;">(Not clickable)</div>
+        </div>
+    </div>
+
+    <script>
+        function showDemo(type) {
+            const messages = {
+                users: 'In the real app, this would show:\n• User list with roles and departments\n• Activity statistics\n• Recent sign-ins\n• User status breakdown',
+                inactive: 'In the real app, this would show:\n• List of inactive users\n• Last sign-in dates\n• Department breakdown\n• Reactivation suggestions',
+                overactive: 'In the real app, this would show:\n• List of highly active users\n• Sign-in frequency data\n• Usage patterns\n• Activity timeline',
+                requests: 'In the real app, this would show:\n• Request status breakdown\n• Recent requests\n• Priority distribution\n• Department analysis',
+                orders: 'In the real app, this would show:\n• Order status breakdown\n• Recent orders\n• Supplier analysis\n• Spending trends'
+            };
+            
+            alert(`${type.toUpperCase()} DETAILS MODAL\n\n${messages[type]}`);
+        }
+    </script>
+</body>
+</html>

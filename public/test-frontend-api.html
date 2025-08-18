@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Frontend API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .log { margin: 10px 0; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Frontend API Test</h1>
+        
+        <div class="test-section">
+            <h2>Authentication Test</h2>
+            <button onclick="testLogin()">Test Login</button>
+            <button onclick="testSession()">Check Session</button>
+            <div id="auth-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Requests API Test</h2>
+            <button onclick="testGetRequests()">Get Requests</button>
+            <button onclick="testUpdateRequest()">Test Update Request</button>
+            <div id="requests-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Debug Logs</h2>
+            <div id="debug-logs"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const debugLogs = document.getElementById('debug-logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            debugLogs.appendChild(logDiv);
+            console.log(message);
+        }
+
+        async function testLogin() {
+            log('Testing login...', 'info');
+            try {
+                const response = await fetch('/api/auth/signin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin1@company.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const result = await response.text();
+                log(`Login response: ${response.status} - ${result}`, response.ok ? 'success' : 'error');
+                document.getElementById('auth-result').innerHTML = `<pre>${result}</pre>`;
+            } catch (error) {
+                log(`Login error: ${error.message}`, 'error');
+                document.getElementById('auth-result').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testSession() {
+            log('Testing session...', 'info');
+            try {
+                const response = await fetch('/api/auth/session');
+                const result = await response.json();
+                log(`Session response: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+                document.getElementById('auth-result').innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+            } catch (error) {
+                log(`Session error: ${error.message}`, 'error');
+                document.getElementById('auth-result').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testGetRequests() {
+            log('Testing get requests...', 'info');
+            try {
+                const response = await fetch('/api/requests?limit=10000');
+                const result = await response.json();
+                log(`Get requests response: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    log(`Found ${result.requests?.length || 0} requests`, 'success');
+                    document.getElementById('requests-result').innerHTML = `
+                        <div class="success">✅ Found ${result.requests?.length || 0} requests</div>
+                        <pre>${JSON.stringify(result.requests?.slice(0, 2) || [], null, 2)}</pre>
+                    `;
+                } else {
+                    log(`Error: ${result.error}`, 'error');
+                    document.getElementById('requests-result').innerHTML = `<span class="error">Error: ${result.error}</span>`;
+                }
+            } catch (error) {
+                log(`Get requests error: ${error.message}`, 'error');
+                document.getElementById('requests-result').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testUpdateRequest() {
+            log('Testing update request...', 'info');
+            
+            // First get a request to update
+            try {
+                const getResponse = await fetch('/api/requests?limit=10000');
+                if (!getResponse.ok) {
+                    throw new Error('Failed to get requests');
+                }
+                
+                const getResult = await getResponse.json();
+                if (!getResult.requests || getResult.requests.length === 0) {
+                    throw new Error('No requests found');
+                }
+                
+                const sampleRequest = getResult.requests[0];
+                log(`Using request: ${sampleRequest.title} (${sampleRequest.id})`, 'info');
+                
+                // Prepare update data
+                const updateData = {
+                    title: sampleRequest.title + ' (Updated)',
+                    description: sampleRequest.description || 'Updated description',
+                    department: sampleRequest.department,
+                    priority: sampleRequest.priority,
+                    items: sampleRequest.items.map(item => ({
+                        itemId: item.itemId || item.id,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        totalPrice: item.totalPrice,
+                        notes: item.notes
+                    }))
+                };
+                
+                log(`Update data prepared: ${JSON.stringify(updateData, null, 2)}`, 'info');
+                
+                // Make the update request
+                const updateResponse = await fetch(`/api/requests/${sampleRequest.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const updateResult = await updateResponse.json();
+                log(`Update response: ${updateResponse.status} - ${JSON.stringify(updateResult)}`, updateResponse.ok ? 'success' : 'error');
+                
+                if (updateResponse.ok) {
+                    document.getElementById('requests-result').innerHTML = `
+                        <div class="success">✅ Request updated successfully!</div>
+                        <pre>${JSON.stringify(updateResult, null, 2)}</pre>
+                    `;
+                } else {
+                    document.getElementById('requests-result').innerHTML = `
+                        <div class="error">❌ Update failed: ${updateResult.error}</div>
+                        <pre>${JSON.stringify(updateResult, null, 2)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                log(`Update request error: ${error.message}`, 'error');
+                document.getElementById('requests-result').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        // Auto-test session on load
+        window.onload = function() {
+            log('Page loaded, testing session...', 'info');
+            testSession();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+💰 DECEMBER 2025 SPENDING VERIFICATION
+=====================================
+
+Verification Period: 01/08/2025 to 31/08/2025
+
+🏢 DEPARTMENT SPENDING BREAKDOWN:
+================================
+
+✅ Finance (FINANCE):
+   Total Spending: $3,080.27
+   Request Spending: $3,080.27
+   PO Spending: $0
+   Budget: $300,000
+   Budget Utilization: 1.0%
+   Requests Count: 3
+   Target Met: YES
+
+✅ Human Resources (HR):
+   Total Spending: $3,000
+   Request Spending: $3,000
+   PO Spending: $0
+   Budget: $200,000
+   Budget Utilization: 1.5%
+   Requests Count: 2
+   Target Met: YES
+
+✅ Information Technology (IT):
+   Total Spending: $3,070.05
+   Request Spending: $3,070.05
+   PO Spending: $0
+   Budget: $500,000
+   Budget Utilization: 0.6%
+   Requests Count: 4
+   Target Met: YES
+
+❌ Legal (LEGAL):
+   Total Spending: $2,996.79
+   Request Spending: $2,996.79
+   PO Spending: $0
+   Budget: $150,000
+   Budget Utilization: 2.0%
+   Requests Count: 1
+   Target Met: NO
+
+✅ Marketing (MKT):
+   Total Spending: $3,075.73
+   Request Spending: $3,075.73
+   PO Spending: $0
+   Budget: $250,000
+   Budget Utilization: 1.2%
+   Requests Count: 2
+   Target Met: YES
+
+✅ Operations (OPS):
+   Total Spending: $3,000
+   Request Spending: $3,000
+   PO Spending: $0
+   Budget: $400,000
+   Budget Utilization: 0.8%
+   Requests Count: 3
+   Target Met: YES
+
+✅ Procurement (PROC):
+   Total Spending: $3,075.37
+   Request Spending: $3,075.37
+   PO Spending: $0
+   Budget: $180,000
+   Budget Utilization: 1.7%
+   Requests Count: 3
+   Target Met: YES
+
+✅ Sales (SALES):
+   Total Spending: $3,000
+   Request Spending: $3,000
+   PO Spending: $0
+   Budget: $350,000
+   Budget Utilization: 0.9%
+   Requests Count: 4
+   Target Met: YES
+
+✅ Software Development (IT_DEV):
+   Total Spending: $3,037.34
+   Request Spending: $3,037.34
+   PO Spending: $0
+   Budget: $600,000
+   Budget Utilization: 0.5%
+   Requests Count: 1
+   Target Met: YES
+
+📊 SUMMARY STATISTICS:
+=====================
+
+Total Departments: 9
+Departments Meeting $3,000 Target: 8
+Departments Below Target: 1
+Success Rate: 88.9%
+Total System Spending (December): $27,335.55
+Average Department Spending: $3,037.283
+
+📅 MONTHLY SPENDING OVERVIEW (2025):
+===================================
+
+January: $8,672.96
+February: $0
+March: $0
+April: $0
+May: $0
+June: $369.28
+July: $0
+August: $27,572.45
+
+🔝 TOP SPENDING ITEMS (December 2025):
+====================================
+
+Frozen Marble Towels: $2,540.85 (3 orders)
+Gorgeous Wooden Chicken: $1,960.85 (3 orders)
+Handcrafted Plastic Bacon: $1,844.9 (2 orders)
+Incredible Granite Towels: $1,441.2 (2 orders)
+Unbranded Metal Sausages: $1,338.49 (3 orders)
+Office Chair: $1,098.48 (2 orders)
+Bespoke Ceramic Ball: $1,045.45 (3 orders)
+Bookshelf: $940.82 (2 orders)
+Keyboard (Stationery World): $909.31 (4 orders)
+Oriental Gold Shirt: $896.95 (2 orders)
+
+⚠️ 1 departments still below $3,000 target.

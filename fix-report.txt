@@ -1,0 +1,115 @@
+🔧 Quick Fix Report
+
+Total users: 95
+
+Users with department but no departmentId: 59
+- Main Admin (admin@example.com) - Dept: IT
+- Manager 1 (manager1@company.com) - Dept: IT
+- Manager 2 (manager2@company.com) - Dept: HR
+- Manager 3 (manager3@company.com) - Dept: Finance
+- Manager 4 (manager4@company.com) - Dept: Operations
+- Manager 5 (manager5@company.com) - Dept: Marketing
+- Manager 6 (manager6@company.com) - Dept: Sales
+- Manager 7 (manager7@company.com) - Dept: Legal
+- Manager 8 (manager8@company.com) - Dept: Procurement
+- Employee 1 (employee1@company.com) - Dept: Finance
+- Employee 2 (employee2@company.com) - Dept: Finance
+- Employee 3 (employee3@company.com) - Dept: Finance
+- Employee 4 (employee4@company.com) - Dept: Legal
+- Employee 5 (employee5@company.com) - Dept: Finance
+- Employee 6 (employee6@company.com) - Dept: Marketing
+- Employee 7 (employee7@company.com) - Dept: Sales
+- Employee 8 (employee8@company.com) - Dept: Procurement
+- Employee 9 (employee9@company.com) - Dept: Procurement
+- Employee 10 (employee10@company.com) - Dept: Finance
+- Employee 11 (employee11@company.com) - Dept: IT
+- Employee 12 (employee12@company.com) - Dept: Finance
+- Employee 13 (employee13@company.com) - Dept: Sales
+- Employee 14 (employee14@company.com) - Dept: Marketing
+- Employee 15 (employee15@company.com) - Dept: HR
+- Employee 16 (employee16@company.com) - Dept: Operations
+- Employee 17 (employee17@company.com) - Dept: Legal
+- Employee 18 (employee18@company.com) - Dept: Legal
+- Employee 19 (employee19@company.com) - Dept: Sales
+- Employee 20 (employee20@company.com) - Dept: Procurement
+- Employee 21 (employee21@company.com) - Dept: Marketing
+- Employee 22 (employee22@company.com) - Dept: Sales
+- Employee 23 (employee23@company.com) - Dept: Sales
+- Employee 24 (employee24@company.com) - Dept: Marketing
+- Employee 25 (employee25@company.com) - Dept: Marketing
+- Employee 26 (employee26@company.com) - Dept: Sales
+- Employee 27 (employee27@company.com) - Dept: Operations
+- Employee 28 (employee28@company.com) - Dept: Operations
+- Employee 29 (employee29@company.com) - Dept: HR
+- Employee 30 (employee30@company.com) - Dept: IT
+- Employee 31 (employee31@company.com) - Dept: IT
+- Employee 32 (employee32@company.com) - Dept: Marketing
+- Employee 33 (employee33@company.com) - Dept: Marketing
+- Employee 34 (employee34@company.com) - Dept: Procurement
+- Employee 35 (employee35@company.com) - Dept: Sales
+- Employee 36 (employee36@company.com) - Dept: HR
+- Employee 37 (employee37@company.com) - Dept: Marketing
+- Employee 38 (employee38@company.com) - Dept: HR
+- Employee 39 (employee39@company.com) - Dept: Procurement
+- Employee 40 (employee40@company.com) - Dept: Finance
+- Employee 41 (employee41@company.com) - Dept: Procurement
+- Employee 42 (employee42@company.com) - Dept: Sales
+- Employee 43 (employee43@company.com) - Dept: Marketing
+- Employee 44 (employee44@company.com) - Dept: Legal
+- Employee 45 (employee45@company.com) - Dept: Operations
+- Employee 46 (employee46@company.com) - Dept: Procurement
+- Employee 47 (employee47@company.com) - Dept: Procurement
+- Employee 48 (employee48@company.com) - Dept: Marketing
+- Employee 49 (employee49@company.com) - Dept: Legal
+- Employee 50 (employee50@company.com) - Dept: Sales
+Fixed: Manager 3 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Manager 4 -> Operations (cmdzqsls40003fc0sv2oweh7y)
+Fixed: Manager 5 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Manager 6 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Manager 7 -> Legal (cmdzqsltf0006fc0str3dv7x1)
+Fixed: Manager 8 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 1 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 2 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 3 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 4 -> Legal (cmdzqsltf0006fc0str3dv7x1)
+Fixed: Employee 5 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 6 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 7 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 8 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 9 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 10 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 12 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 13 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 14 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 16 -> Operations (cmdzqsls40003fc0sv2oweh7y)
+Fixed: Employee 17 -> Legal (cmdzqsltf0006fc0str3dv7x1)
+Fixed: Employee 18 -> Legal (cmdzqsltf0006fc0str3dv7x1)
+Fixed: Employee 19 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 20 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 21 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 22 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 23 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 24 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 25 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 26 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 27 -> Operations (cmdzqsls40003fc0sv2oweh7y)
+Fixed: Employee 28 -> Operations (cmdzqsls40003fc0sv2oweh7y)
+Fixed: Employee 32 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 33 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 34 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 35 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 37 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 39 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 40 -> Finance (cmdzqslry0002fc0sv6lkpq73)
+Fixed: Employee 41 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 42 -> Sales (cmdzqslt90005fc0so9uf8joj)
+Fixed: Employee 43 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 44 -> Legal (cmdzqsltf0006fc0str3dv7x1)
+Fixed: Employee 45 -> Operations (cmdzqsls40003fc0sv2oweh7y)
+Fixed: Employee 46 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 47 -> Procurement (cmdzqsltl0007fc0spyuv8ds9)
+Fixed: Employee 48 -> Marketing (cmdzqslsc0004fc0so3jtbwh2)
+Fixed: Employee 49 -> Legal (cmdzqsltf0006fc0str3dv7x1)
+Fixed: Employee 50 -> Sales (cmdzqslt90005fc0so9uf8joj)
+
+Fixed 49 users
