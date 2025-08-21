@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -18,6 +18,8 @@ type SignInForm = z.infer<typeof signInSchema>
 export default function SignInPage() {
   const router = useRouter()
   const { login, isLoading, error } = useAuth()
+  const [debugMode, setDebugMode] = useState(false)
+  const [sessionStatus, setSessionStatus] = useState<string>('Checking...')
 
   const {
     register,
@@ -27,7 +29,28 @@ export default function SignInPage() {
     resolver: zodResolver(signInSchema),
   })
 
+  // Check for existing session on load
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const session = await getSession()
+        if (session) {
+          setSessionStatus(`Active session found for: ${session.user?.email}`)
+          console.log('Active session found:', session)
+        } else {
+          setSessionStatus('No active session')
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+        setSessionStatus('Error checking session')
+      }
+    }
+    
+    checkSession()
+  }, [])
+
   const onSubmit = async (data: SignInForm) => {
+    console.log('Form submitted with:', { email: data.email, passwordLength: data.password.length })
     await login(data.email, data.password)
   }
 
@@ -77,7 +100,10 @@ export default function SignInPage() {
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <strong className="font-bold">Error: </strong>
+              <span className="block sm:inline">{error}</span>
+            </div>
           )}
 
           <div>
@@ -95,6 +121,28 @@ export default function SignInPage() {
               Demo credentials: admin@example.com / admin123
             </p>
           </div>
+          
+          {/* Debug toggle */}
+          <div className="mt-4 text-center">
+            <button 
+              type="button"
+              onClick={() => setDebugMode(!debugMode)}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              {debugMode ? 'Hide Debug Info' : 'Show Debug Info'}
+            </button>
+          </div>
+          
+          {/* Debug information */}
+          {debugMode && (
+            <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-700 font-mono">
+              <div><strong>Session Status:</strong> {sessionStatus}</div>
+              <div><strong>NextAuth URL:</strong> {process.env.NEXT_PUBLIC_NEXTAUTH_URL || 'Not set'}</div>
+              <div><strong>App URL:</strong> {window.location.origin}</div>
+              <div><strong>Current URL:</strong> {window.location.href}</div>
+              <div><strong>Browser:</strong> {navigator.userAgent}</div>
+            </div>
+          )}
         </form>
       </div>
     </div>

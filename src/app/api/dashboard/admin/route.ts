@@ -4,8 +4,20 @@ import { checkAccess, DASHBOARD_ACCESS } from '@/lib/server-access-control'
 
 export async function GET() {
   try {
+    // Log the access check attempt for debugging
+    console.log('Attempting admin dashboard access check')
+    
     const accessCheck = await checkAccess(DASHBOARD_ACCESS.ADMIN)
+    
+    // Log the access check result
+    console.log('Admin dashboard access check result:', {
+      hasAccess: accessCheck.hasAccess,
+      error: accessCheck.error,
+      status: accessCheck.status
+    })
+    
     if (!accessCheck.hasAccess) {
+      console.error('Admin dashboard access denied:', accessCheck.error)
       return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
     }
 

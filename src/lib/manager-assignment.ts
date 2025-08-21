@@ -1,4 +1,5 @@
 import { db as prisma } from '@/lib/db'
+import { notificationService } from '@/lib/notification-service'
 
 export interface ManagerAssignmentResult {
   success: boolean
@@ -13,6 +14,13 @@ export interface ManagerAssignmentResult {
     email: string
     currentDepartment?: string
   }>
+}
+
+export interface ManagerChangeEvent {
+  type: 'MANAGER_ADDED' | 'MANAGER_ACTIVATED' | 'MANAGER_DEACTIVATED' | 'MANAGER_TRANSFERRED'
+  departmentId: string
+  managerId: string
+  previousDepartmentId?: string
 }
 
 /**
@@ -103,8 +111,8 @@ export async function autoAssignManagerToDepartment(
         success: true,
         action: 'ASSIGNED',
         assignedManagerId: manager.id,
-        assignedManagerName: manager.name,
-        message: `Manager ${manager.name} automatically assigned to department ${department.name}`
+        assignedManagerName: manager.name || 'Unknown',
+        message: `Manager ${manager.name || 'Unknown'} automatically assigned to department ${department.name}`
       }
     } else {
       // Multiple managers - notify admin to choose
@@ -120,7 +128,12 @@ export async function autoAssignManagerToDepartment(
         action: 'NOTIFICATION_SENT',
         notificationId,
         message: 'Multiple managers found. Admin notification sent for manual selection.',
-        availableManagers: departmentManagers
+        availableManagers: departmentManagers.map(m => ({
+          id: m.id,
+          name: m.name || 'Unknown',
+          email: m.email,
+          currentDepartment: m.departmentId || undefined
+        }))
       }
     }
 
@@ -137,7 +150,7 @@ export async function autoAssignManagerToDepartment(
 /**
  * Gets all available managers for a department (including those from other departments)
  */
-export async function getAvailableManagersForDepartment(departmentId: string) {
+export async function getAvailableManagersForDepartment(_departmentId: string) {
   try {
     const managers = await prisma.user.findMany({
       where: {
@@ -244,8 +257,8 @@ export async function manuallyAssignManager(
       success: true,
       action: 'ASSIGNED',
       assignedManagerId: manager.id,
-      assignedManagerName: manager.name,
-      message: `Manager ${manager.name} successfully assigned to department ${department.name}`
+      assignedManagerName: manager.name || 'Unknown',
+      message: `Manager ${manager.name || 'Unknown'} successfully assigned to department ${department.name}`
     }
 
   } catch (error) {
@@ -262,10 +275,10 @@ export async function manuallyAssignManager(
  * Creates a notification for admin about manager assignment
  */
 async function createManagerAssignmentNotification(
-  department: any,
+  department: { id: string; name: string; code: string; managerId?: string | null },
   scenario: 'NO_MANAGERS' | 'MULTIPLE_MANAGERS',
   message: string,
-  availableManagers: any[]
+  availableManagers: Array<{ id: string; name: string | null; email: string }>
 ): Promise<string> {
   const notificationData = {
     departmentId: department.id,
@@ -391,8 +404,335 @@ export async function checkAndNotifyMultipleManagers(): Promise<{
       success: false,
       notificationsCreated: 0,
       departmentsChecked: 0,
-      message: `Error: ${error.message}`
+      message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
+  }
+}
+
+/**
+ * Enhanced automatic manager assignment that handles all scenarios
+ * This is the main function that should be called whenever manager status changes
+ */
+export async function processManagerAssignmentForDepartment(
+  departmentId: string,
+  triggerEvent?: ManagerChangeEvent
+): Promise<ManagerAssignmentResult> {
+  try {
+    // Get department details with current manager and all active managers
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      include: {
+        manager: {
+          select: { id: true, name: true, email: true }
+        },
+        users: {
+          where: {
+            role: 'MANAGER',
+            status: 'ACTIVE'
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            departmentId: true
+          }
+        }
+      }
+    })
+
+    if (!department) {
+      return {
+        success: false,
+        action: 'NO_ACTION',
+        message: 'Department not found'
+      }
+    }
+
+    const activeManagers = department.users
+    const currentManagerId = department.managerId
+
+    // Scenario 1: Exactly one active manager and no assigned manager
+    if (activeManagers.length === 1 && !currentManagerId) {
+      const manager = activeManagers[0]
+      
+      await prisma.department.update({
+        where: { id: departmentId },
+        data: { managerId: manager.id }
+      })
+
+      await createAuditLog(
+        'MANAGER_AUTO_ASSIGNED',
+        'Department',
+        departmentId,
+        'SYSTEM',
+        `Manager ${manager.name || 'Unknown'} automatically assigned to department ${department.name}`
+      )
+
+      return {
+        success: true,
+        action: 'ASSIGNED',
+        assignedManagerId: manager.id,
+        assignedManagerName: manager.name || 'Unknown',
+        message: `Manager ${manager.name || 'Unknown'} automatically assigned to department ${department.name}`
+      }
+    }
+
+    // Scenario 2: No active managers in department
+    if (activeManagers.length === 0) {
+      // Clear any existing manager assignment if manager is no longer active
+      if (currentManagerId) {
+        await prisma.department.update({
+          where: { id: departmentId },
+          data: { managerId: null }
+        })
+      }
+
+      const notificationId = await createManagerAssignmentNotification(
+        department,
+        'NO_MANAGERS',
+        'No active managers available in department',
+        []
+      )
+
+      return {
+        success: true,
+        action: 'NOTIFICATION_SENT',
+        notificationId,
+        message: 'No active managers found in department. Admin notification sent.',
+        availableManagers: []
+      }
+    }
+
+    // Scenario 3: Multiple managers (2 or more)
+    if (activeManagers.length >= 2) {
+      // Always notify admin when there are multiple managers
+      // Check if notification already exists to avoid duplicates
+      const existingNotification = await prisma.notification.findFirst({
+        where: {
+          type: 'MANAGER_ASSIGNMENT',
+          data: {
+            contains: `"departmentId":"${departmentId}"`
+          },
+          status: 'UNREAD'
+        }
+      })
+
+      if (!existingNotification) {
+        const notificationId = await createManagerAssignmentNotification(
+          department,
+          'MULTIPLE_MANAGERS',
+          'Multiple managers available for assignment',
+          activeManagers
+        )
+
+        return {
+          success: true,
+          action: 'NOTIFICATION_SENT',
+          notificationId,
+          message: `Multiple managers (${activeManagers.length}) found. Admin notification sent for manual selection.`,
+          availableManagers: activeManagers.map(m => ({
+            id: m.id,
+            name: m.name || 'Unknown',
+            email: m.email,
+            currentDepartment: m.departmentId || undefined
+          }))
+        }
+      } else {
+        return {
+          success: true,
+          action: 'NO_ACTION',
+          message: 'Multiple managers detected, but admin notification already exists.'
+        }
+      }
+    }
+
+    // Scenario 4: Department already has proper assignment
+    return {
+      success: true,
+      action: 'NO_ACTION',
+      message: 'Department manager assignment is already properly configured.'
+    }
+
+  } catch (error) {
+    console.error('Error in processManagerAssignmentForDepartment:', error)
+    return {
+      success: false,
+      action: 'NO_ACTION',
+      message: 'Failed to process manager assignment'
+    }
+  }
+}
+
+/**
+ * Process manager assignment for all departments
+ * This should be called periodically or when bulk changes occur
+ */
+export async function processAllDepartmentManagerAssignments(): Promise<{
+  success: boolean
+  totalDepartments: number
+  autoAssigned: number
+  notificationsSent: number
+  errors: number
+  results: ManagerAssignmentResult[]
+}> {
+  try {
+    const departments = await prisma.department.findMany({
+      where: { status: 'ACTIVE' },
+      select: { id: true }
+    })
+
+    const results: ManagerAssignmentResult[] = []
+    let autoAssigned = 0
+    let notificationsSent = 0
+    let errors = 0
+
+    for (const dept of departments) {
+      try {
+        const result = await processManagerAssignmentForDepartment(dept.id)
+        results.push(result)
+
+        if (result.success) {
+          if (result.action === 'ASSIGNED') {
+            autoAssigned++
+          } else if (result.action === 'NOTIFICATION_SENT') {
+            notificationsSent++
+          }
+        } else {
+          errors++
+        }
+      } catch (error) {
+        console.error(`Error processing department ${dept.id}:`, error)
+        results.push({
+          success: false,
+          action: 'NO_ACTION',
+          message: 'Processing error'
+        })
+        errors++
+      }
+    }
+
+    return {
+      success: true,
+      totalDepartments: departments.length,
+      autoAssigned,
+      notificationsSent,
+      errors,
+      results
+    }
+  } catch (error) {
+    console.error('Error in processAllDepartmentManagerAssignments:', error)
+    return {
+      success: false,
+      totalDepartments: 0,
+      autoAssigned: 0,
+      notificationsSent: 0,
+      errors: 1,
+      results: []
+    }
+  }
+}
+
+/**
+ * Handle manager status change events
+ * This should be called whenever a manager's status changes
+ */
+export async function handleManagerStatusChange(
+  managerId: string,
+  newStatus: 'ACTIVE' | 'INACTIVE',
+  departmentId?: string
+): Promise<ManagerAssignmentResult[]> {
+  try {
+    const results: ManagerAssignmentResult[] = []
+
+    if (newStatus === 'ACTIVE' && departmentId) {
+      // Manager activated - check their department
+      const result = await processManagerAssignmentForDepartment(departmentId, {
+        type: 'MANAGER_ACTIVATED',
+        departmentId,
+        managerId
+      })
+      results.push(result)
+    } else if (newStatus === 'INACTIVE') {
+      // Manager deactivated - check all departments they might affect
+      const manager = await prisma.user.findUnique({
+        where: { id: managerId },
+        include: {
+          managedDepartments: true,
+          departmentRef: true
+        }
+      })
+
+      if (manager) {
+        // Check departments they were managing
+        for (const dept of manager.managedDepartments) {
+          const result = await processManagerAssignmentForDepartment(dept.id, {
+            type: 'MANAGER_DEACTIVATED',
+            departmentId: dept.id,
+            managerId
+          })
+          results.push(result)
+        }
+
+        // Check their own department if different
+        if (manager.departmentId && !manager.managedDepartments.some(d => d.id === manager.departmentId)) {
+          const result = await processManagerAssignmentForDepartment(manager.departmentId, {
+            type: 'MANAGER_DEACTIVATED',
+            departmentId: manager.departmentId,
+            managerId
+          })
+          results.push(result)
+        }
+      }
+    }
+
+    return results
+  } catch (error) {
+    console.error('Error handling manager status change:', error)
+    return [{
+      success: false,
+      action: 'NO_ACTION',
+      message: 'Failed to handle manager status change'
+    }]
+  }
+}
+
+/**
+ * Handle manager department transfer
+ */
+export async function handleManagerTransfer(
+  managerId: string,
+  fromDepartmentId: string,
+  toDepartmentId: string
+): Promise<ManagerAssignmentResult[]> {
+  try {
+    const results: ManagerAssignmentResult[] = []
+
+    // Process the department they left
+    const fromResult = await processManagerAssignmentForDepartment(fromDepartmentId, {
+      type: 'MANAGER_TRANSFERRED',
+      departmentId: fromDepartmentId,
+      managerId,
+      previousDepartmentId: fromDepartmentId
+    })
+    results.push(fromResult)
+
+    // Process the department they joined
+    const toResult = await processManagerAssignmentForDepartment(toDepartmentId, {
+      type: 'MANAGER_TRANSFERRED',
+      departmentId: toDepartmentId,
+      managerId,
+      previousDepartmentId: fromDepartmentId
+    })
+    results.push(toResult)
+
+    return results
+  } catch (error) {
+    console.error('Error handling manager transfer:', error)
+    return [{
+      success: false,
+      action: 'NO_ACTION',
+      message: 'Failed to handle manager transfer'
+    }]
   }
 }
 

@@ -128,13 +128,33 @@ export default function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
+      console.log('Fetching admin dashboard data...')
+      
       const response = await fetch('/api/dashboard/admin')
+      console.log('Admin dashboard API response status:', response.status)
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch admin dashboard data')
+        const errorData = await response.json().catch(() => null)
+        console.error('Admin dashboard API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        })
+        
+        if (response.status === 401) {
+          throw new Error('Unauthorized: Please sign in again')
+        } else if (response.status === 403) {
+          throw new Error('Access denied: You do not have permission to view the admin dashboard')
+        } else {
+          throw new Error(`Failed to fetch admin dashboard data: ${errorData?.error || response.statusText}`)
+        }
       }
+      
       const data = await response.json()
+      console.log('Admin dashboard data fetched successfully')
       setDashboardData(data)
     } catch (err) {
+      console.error('Error in fetchDashboardData:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
@@ -154,8 +174,20 @@ export default function AdminDashboardPage() {
   if (error || !dashboardData) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-red-600">Error: {error || 'Failed to load data'}</div>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="text-lg text-red-600 font-semibold">
+            Error: {error || 'Failed to load dashboard data'}
+          </div>
+          <p className="text-gray-600 max-w-md text-center">
+            There was a problem loading the admin dashboard. This could be due to a network issue, 
+            server error, or insufficient permissions.
+          </p>
+          <button
+            onClick={() => fetchDashboardData()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </DashboardLayout>
     )

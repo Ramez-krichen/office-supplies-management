@@ -23,9 +23,12 @@ export interface AccessControlOptions {
  * Check if a user has access based on their role and department (SERVER-SIDE ONLY)
  */
 export async function checkAccess(options: AccessControlOptions = {}) {
+  console.log('Checking access with options:', options)
+  
   const session = await getServerSession(authOptions)
-
+  
   if (!session) {
+    console.log('Access denied: No session found')
     return {
       hasAccess: false,
       error: 'Unauthorized - No session',
@@ -35,6 +38,7 @@ export async function checkAccess(options: AccessControlOptions = {}) {
 
   // Guard against malformed session objects to avoid runtime exceptions
   if (!session.user || typeof (session.user as any).role !== 'string') {
+    console.log('Access denied: Invalid session data', { session })
     return {
       hasAccess: false,
       error: 'Unauthorized - Invalid session data',
@@ -44,6 +48,13 @@ export async function checkAccess(options: AccessControlOptions = {}) {
 
   const userRole = session.user.role as UserRole
   const userDepartment = session.user.department
+  
+  console.log('User access check:', { 
+    userId: session.user.id,
+    userRole, 
+    userDepartment,
+    options 
+  })
 
   // Fetch user permissions from database
   let userPermissions = ''
@@ -59,6 +70,7 @@ export async function checkAccess(options: AccessControlOptions = {}) {
 
   // Check specific role requirement
   if (options.requireRole && userRole !== options.requireRole) {
+    console.log(`Access denied: User role ${userRole} does not match required role ${options.requireRole}`)
     return {
       hasAccess: false,
       error: `Forbidden - Requires ${options.requireRole} role`,
@@ -68,12 +80,19 @@ export async function checkAccess(options: AccessControlOptions = {}) {
 
   // Check allowed roles
   if (options.allowedRoles && !options.allowedRoles.includes(userRole)) {
+    console.log(`Access denied: User role ${userRole} not in allowed roles [${options.allowedRoles.join(', ')}]`)
     return {
       hasAccess: false,
       error: `Forbidden - Requires one of: ${options.allowedRoles.join(', ')}`,
       status: 403
     }
   }
+  
+  // Log successful role check
+  console.log(`Role check passed for user role: ${userRole}`, { 
+    requireRole: options.requireRole,
+    allowedRoles: options.allowedRoles
+  })
 
   // Check department requirement
   if (options.requireDepartment && !userDepartment) {
@@ -111,9 +130,9 @@ export async function checkAccess(options: AccessControlOptions = {}) {
 
   // Special handling for General Manager role - strict segregation of duties
   if (userRole === 'GENERAL_MANAGER') {
-    // General Managers can only approve/reject requests
-    if (options.feature === 'requests' && options.action === 'approve') {
-      // Allow General Managers to approve requests
+    // General Managers can view and approve requests, but cannot create/edit/delete
+    if (options.feature === 'requests' && (options.action === 'view' || options.action === 'approve')) {
+      // Allow General Managers to view and approve requests
       return {
         hasAccess: true,
         user: session.user,
@@ -138,7 +157,7 @@ export async function checkAccess(options: AccessControlOptions = {}) {
       // All other actions are forbidden for General Managers
       return {
         hasAccess: false,
-        error: 'Forbidden - General Managers can only approve requests and view audit logs',
+        error: 'Forbidden - General Managers can only view and approve requests',
         status: 403
       }
     }
@@ -184,13 +203,16 @@ export const DASHBOARD_ACCESS = {
     allowedRoles: ['MANAGER', 'ADMIN'] as UserRole[]
   },
   ADMIN: {
-    requireRole: 'ADMIN' as UserRole
+    allowedRoles: ['ADMIN'] as UserRole[]
   },
   DEPARTMENT: {
     allowedRoles: ['MANAGER', 'ADMIN'] as UserRole[]
   },
   SYSTEM: {
     requireRole: 'ADMIN' as UserRole
+  },
+  REQUESTS: {
+    requireRole: 'GENERAL_MANAGER' as UserRole
   }
 } as const
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from '../ui/modal'
 import { FormField, Input, Select, FormActions } from '../ui/form'
-import { User, UserPlus, Edit, Eye, EyeOff } from 'lucide-react'
+import { User, Eye, EyeOff, Key } from 'lucide-react'
 
 interface User {
   id: string
@@ -32,13 +32,15 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
     email: '',
     role: '',
     department: '',
-    status: 'ACTIVE' as const,
-    password: ''
+    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+    password: '',
+    newPassword: ''
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, { message: string; type: string } | undefined>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
   const [password, setPassword] = useState('')
   const [availableDepartments, setAvailableDepartments] = useState<Array<{id: string, name: string, code: string}>>([])
   const [loadingDepartments, setLoadingDepartments] = useState(false)
@@ -51,7 +53,8 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
         role: user.role,
         department: user.department,
         status: user.status,
-        password: '' // Password is not fetched for existing users
+        password: '', // Password is not fetched for existing users
+        newPassword: ''
       })
     } else {
       setFormData({
@@ -59,17 +62,13 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
         email: '',
         role: '',
         department: '',
-        status: 'ACTIVE',
-        password: ''
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+        password: '',
+        newPassword: ''
       })
     }
     setErrors({})
-    if (user && user.role === 'ADMIN' && mode === 'view') {
-      // In a real app, you'd fetch this securely
-      setPassword('fetched-password-for-admin-view');
-    } else {
-      setPassword('');
-    }
+    setPassword('');
   }, [user, mode, isOpen])
 
   // Fetch departments when modal opens
@@ -97,20 +96,20 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
   }, [isOpen])
 
   const validateForm = async () => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, { message: string; type: string }> = {}
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required'
+      newErrors.name = { message: 'Name is required', type: 'required' }
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
+      newErrors.email = { message: 'Email is required', type: 'required' }
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
+      newErrors.email = { message: 'Please enter a valid email address', type: 'pattern' }
     } else {
       // Prevent changing main admin email
       if (mode === 'edit' && user && user.email === 'admin@example.com' && formData.email !== 'admin@example.com') {
-        newErrors.email = 'Cannot change email of the main admin account'
+        newErrors.email = { message: 'Cannot change email of the main admin account', type: 'validate' }
       } else {
         // Check email uniqueness only if it's a new user or email has changed
         if (mode === 'add' || (mode === 'edit' && user && formData.email !== user.email)) {
@@ -120,7 +119,7 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
             const data = await response.json()
 
             if (!response.ok && data.error === 'Email already in use') {
-              newErrors.email = 'This email is already in use'
+              newErrors.email = { message: 'This email is already in use', type: 'validate' }
             }
           } catch (error) {
             console.error('Error checking email uniqueness:', error)
@@ -132,10 +131,10 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
     }
 
     if (!formData.role.trim()) {
-      newErrors.role = 'Role is required'
+      newErrors.role = { message: 'Role is required', type: 'required' }
     } else if (mode === 'edit' && user && user.email === 'admin@example.com' && formData.role !== 'ADMIN') {
       // Prevent changing main admin's role
-      newErrors.role = 'Cannot change role of the main admin account'
+      newErrors.role = { message: 'Cannot change role of the main admin account', type: 'validate' }
     } else if (formData.role === 'ADMIN') {
       // Check if trying to create an admin user
       if (mode === 'add' || (mode === 'edit' && user && user.role !== 'ADMIN')) {
@@ -145,7 +144,7 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
           const data = await response.json()
 
           if (!response.ok && data.error === 'Admin limit reached') {
-            newErrors.role = 'Only one admin account is allowed. Please choose another role.'
+            newErrors.role = { message: 'Only one admin account is allowed. Please choose another role.', type: 'validate' }
           }
         } catch (error) {
           console.error('Error checking admin limit:', error)
@@ -156,11 +155,18 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
     }
 
     if (!formData.department.trim()) {
-      newErrors.department = 'Department is required'
+      newErrors.department = { message: 'Department is required', type: 'required' }
     }
 
     if (mode === 'add' && !formData.password.trim()) {
-      newErrors.password = 'Password is required for new users'
+      newErrors.password = { message: 'Password is required for new users', type: 'required' }
+    }
+
+    // Validate new password for edit mode
+    if (mode === 'edit' && formData.newPassword.trim()) {
+      if (formData.newPassword.length < 6) {
+        newErrors.newPassword = { message: 'Password must be at least 6 characters long', type: 'minLength' }
+      }
     }
 
     setErrors(newErrors)
@@ -180,16 +186,18 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
         return
       }
 
-      await onSave(formData, formData.password)
+      // For edit mode, use newPassword if provided, otherwise don't send password
+      const passwordToSend = mode === 'edit' ? formData.newPassword : formData.password
+      await onSave(formData, passwordToSend)
       onClose()
     } catch (error) {
       console.error('Error saving user:', error)
       // Check if the error is related to email uniqueness or admin limit
       if (error instanceof Error) {
         if (error.message.includes('Email already in use')) {
-          setErrors(prev => ({ ...prev, email: 'This email is already in use' }))
+          setErrors(prev => ({ ...prev, email: { message: 'This email is already in use', type: 'validate' } }))
         } else if (error.message.includes('admin account')) {
-          setErrors(prev => ({ ...prev, role: 'Only one admin account is allowed. Please choose another role.' }))
+          setErrors(prev => ({ ...prev, role: { message: 'Only one admin account is allowed. Please choose another role.', type: 'validate' } }))
         }
       }
     } finally {
@@ -200,7 +208,7 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors(prev => ({ ...prev, [field]: undefined }))
     }
   }
 
@@ -301,8 +309,7 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
           />
         </FormField>
 
-        {(mode === 'add' || (readOnly && user?.role === 'ADMIN')) && (
-
+        {mode === 'add' && (
           <FormField label="Password" error={errors.password}>
             <div className="relative">
               <Input
@@ -325,9 +332,36 @@ export function UserModal({ isOpen, onClose, onSave, user, mode, readOnly = fals
           </FormField>
         )}
 
+        {mode === 'edit' && !readOnly && (
+          <FormField label="New Password (Optional)" error={errors.newPassword}>
+            <div className="relative">
+              <Input
+                type={showNewPassword ? 'text' : 'password'}
+                id="newPassword"
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                placeholder="Leave blank to keep current password"
+                readOnly={readOnly}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              <Key className="h-4 w-4 inline mr-1" />
+              Enter a new password only if you want to change it
+            </p>
+          </FormField>
+        )}
+
         {!readOnly && (
           <FormActions
-            onClose={onClose}
+            onCancel={onClose}
             isSubmitting={isSubmitting}
             submitText={mode === 'edit' ? 'Save Changes' : 'Add User'}
           />

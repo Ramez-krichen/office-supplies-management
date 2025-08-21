@@ -19,10 +19,25 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
+          console.log('Auth attempt for email:', credentials?.email)
+          
           if (!credentials?.email || !credentials?.password) {
+            console.log('Missing credentials')
             return null
           }
 
+          // Check database connection first
+          try {
+            await db.$queryRaw`SELECT 1`;
+            console.log('Database connection successful');
+          } catch (dbError) {
+            console.error('Database connection error:', dbError);
+            // Return null instead of throwing an error to allow for graceful failure
+            return null;
+          }
+
+          // Find user
+          console.log('Looking up user:', credentials.email)
           const user = await db.user.findUnique({
             where: {
               email: credentials.email
@@ -30,8 +45,11 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!user) {
+            console.log('User not found:', credentials.email)
             return null
           }
+
+          console.log('User found:', user.email, 'Status:', user.status, 'Role:', user.role)
 
           // Check if user is active
           if (user.status !== 'ACTIVE') {
@@ -39,24 +57,44 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          )
+          // Debug password info (don't log actual passwords)
+          console.log('Comparing password for:', credentials.email, 
+                     'Password length:', credentials.password.length,
+                     'Stored hash length:', user.password.length)
 
-          if (!isPasswordValid) {
-            console.log('Password validation failed for:', credentials.email)
-            return null
+          // Verify password
+          try {
+            const isPasswordValid = await bcrypt.compare(
+              credentials.password,
+              user.password
+            )
+
+            if (!isPasswordValid) {
+              console.log('Password validation failed for:', credentials.email)
+              return null
+            }
+            
+            console.log('Password validation successful for:', credentials.email)
+          } catch (bcryptError) {
+            console.error('bcrypt error:', bcryptError)
+            throw new Error('Password verification failed')
           }
           
           console.log('Authentication successful for:', credentials.email)
 
           // Update lastSignIn time
-          await db.user.update({
-            where: { id: user.id },
-            data: { lastSignIn: new Date() }
-          })
+          try {
+            await db.user.update({
+              where: { id: user.id },
+              data: { lastSignIn: new Date() }
+            })
+            console.log('Updated last sign-in time for:', credentials.email)
+          } catch (updateError) {
+            console.error('Failed to update last sign-in time:', updateError)
+            // Continue anyway - this shouldn't block login
+          }
 
+          // Return user data
           return {
             id: user.id,
             email: user.email,
@@ -67,7 +105,8 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error('Authorization error:', error)
-          return null
+          // Rethrow with more details to help debugging
+          throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
       }
     })

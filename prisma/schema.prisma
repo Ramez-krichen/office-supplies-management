@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./comprehensive.db"
+  url      = env("DATABASE_URL")
 }
 
 model Department {
@@ -31,27 +31,28 @@ model Department {
 }
 
 model User {
-  id                 String          @id @default(cuid())
-  email              String          @unique
-  name               String?
-  password           String
-  role               String          @default("EMPLOYEE")
-  departmentId       String?
-  department         String?
-  status             String          @default("ACTIVE")
-  permissions        String          @default("")
-  lastSignIn         DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  approvals          Approval[]
-  auditLogs          AuditLog[]
-  managedDepartments Department[]    @relation("DepartmentManager")
-  purchaseOrders     PurchaseOrder[]
-  requests           Request[]
-  returns            Return[]
-  processedReturns   Return[]        @relation("ProcessedReturns")
-  stockMovements     StockMovement[]
-  departmentRef      Department?     @relation("DepartmentUsers", fields: [departmentId], references: [id])
+  id                      String                    @id @default(cuid())
+  email                   String                    @unique
+  name                    String?
+  password                String
+  role                    String                    @default("EMPLOYEE")
+  departmentId            String?
+  department              String?
+  status                  String                    @default("ACTIVE")
+  permissions             String                    @default("")
+  lastSignIn              DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  approvals               Approval[]
+  auditLogs               AuditLog[]
+  managedDepartments      Department[]              @relation("DepartmentManager")
+  purchaseOrders          PurchaseOrder[]
+  requests                Request[]
+  returns                 Return[]
+  processedReturns        Return[]                  @relation("ProcessedReturns")
+  stockMovements          StockMovement[]
+  departmentRef           Department?               @relation("DepartmentUsers", fields: [departmentId], references: [id])
+  notificationPreferences NotificationPreferences?
 
   @@index([departmentId])
   @@index([role])
@@ -61,22 +62,24 @@ model User {
 }
 
 model Supplier {
-  id             String          @id @default(cuid())
-  name           String
-  email          String?
-  phone          String?
-  address        String?
-  contactPerson  String?
-  contactTitle   String?
-  website        String?
-  taxId          String?
-  paymentTerms   String?
-  notes          String?
-  status         String          @default("ACTIVE")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  items          Item[]
-  purchaseOrders PurchaseOrder[]
+  id                    String          @id @default(cuid())
+  name                  String
+  email                 String?
+  phone                 String?
+  address               String?
+  contactPerson         String?
+  contactTitle          String?
+  website               String?
+  taxId                 String?
+  paymentTerms          String?
+  notes                 String?
+  status                String          @default("ACTIVE")
+  categories            String?         // JSON string of detected categories
+  categoriesDetectedAt  DateTime?       // When categories were last auto-detected
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  items                 Item[]
+  purchaseOrders        PurchaseOrder[]
 
   @@map("suppliers")
 }
@@ -300,24 +303,68 @@ model DemandForecast {
 }
 
 model Notification {
-  id           String    @id @default(cuid())
+  id           String                  @id @default(cuid())
   type         String
   title        String
   message      String
   data         String?
-  status       String    @default("UNREAD")
-  priority     String    @default("MEDIUM")
+  status       String                  @default("UNREAD")
+  priority     String                  @default("MEDIUM")
   targetRole   String?
   targetUserId String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  category     String                  @default("GENERAL")
+  actionUrl    String?
+  actionLabel  String?
+  expiresAt    DateTime?
+  metadata     String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
   readAt       DateTime?
   dismissedAt  DateTime?
+  deliveries   NotificationDelivery[]
 
   @@index([status])
   @@index([targetRole])
   @@index([targetUserId])
   @@index([type])
   @@index([createdAt])
+  @@index([category])
+  @@index([expiresAt])
   @@map("notifications")
+}
+
+model NotificationPreferences {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  emailEnabled         Boolean  @default(true)
+  inAppEnabled         Boolean  @default(true)
+  requestStatusChanges Boolean  @default(true)
+  managerAssignments   Boolean  @default(true)
+  systemAlerts         Boolean  @default(true)
+  weeklyDigest         Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model NotificationDelivery {
+  id             String       @id @default(cuid())
+  notificationId String
+  deliveryType   String       // EMAIL, IN_APP, PUSH
+  status         String       @default("PENDING") // PENDING, SENT, DELIVERED, FAILED
+  attemptCount   Int          @default(0)
+  lastAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
+  @@index([deliveryType])
+  @@map("notification_deliveries")
 }

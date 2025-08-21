@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { Users, Search, Shield, User, Crown, Eye, Filter, Download, Lock, Edit, X, Save, Bell } from 'lucide-react'
+import { Users, Search, Shield, User, Crown, Eye, Filter, Download, Lock, Edit, X, Save, Bell, KeyRound } from 'lucide-react'
+import { PasswordResetModal } from '@/components/modals/PasswordResetModal'
 
 
 interface User {
   id: string
   name: string
   email: string
-  password: string
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE'
   department: string
   status: 'Active' | 'Inactive'
@@ -76,8 +76,9 @@ export default function AdminUsersPage() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [editFormData, setEditFormData] = useState<User | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
   const [notification, setNotification] = useState<string | null>(null)
+  const [passwordResetModalOpen, setPasswordResetModalOpen] = useState(false)
+  const [userForPasswordReset, setUserForPasswordReset] = useState<User | null>(null)
   
   // Check if user is admin and redirect if not
   useEffect(() => {
@@ -226,7 +227,6 @@ export default function AdminUsersPage() {
     setEditModalOpen(false)
     setSelectedUser(null)
     setEditFormData(null)
-    setShowPassword(false)
   }
 
   // Show loading state
@@ -416,6 +416,16 @@ export default function AdminUsersPage() {
                           <Edit className="h-4 w-4" />
                           Edit
                         </button>
+                        <button
+                          onClick={() => {
+                            setUserForPasswordReset(user)
+                            setPasswordResetModalOpen(true)
+                          }}
+                          className="text-red-600 hover:text-red-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Reset Password
+                        </button>
                         {user.email === 'admin@example.com' && (
                           <span className="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded">
                             Main Admin
@@ -489,20 +499,6 @@ export default function AdminUsersPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status</label>
                   <p className="mt-1 text-sm text-gray-900">{selectedUser.status}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Password</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <p className="text-sm text-gray-900 font-mono">
-                      {showPassword ? selectedUser.password : '••••••••••••••••'}
-                    </p>
-                    <button
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-indigo-600 hover:text-indigo-800 text-sm"
-                    >
-                      {showPassword ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Last Sign In</label>
@@ -581,19 +577,6 @@ export default function AdminUsersPage() {
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">New Password (optional)</label>
-                  <input
-                    type="password"
-                    placeholder="Leave blank to keep current password"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setEditFormData({ ...editFormData, password: e.target.value })
-                      }
-                    }}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
               </div>
               <div className="mt-6 flex justify-end space-x-3">
                 <button
@@ -613,6 +596,20 @@ export default function AdminUsersPage() {
             </div>
           </div>
         )}
+
+        {/* Password Reset Modal */}
+        <PasswordResetModal
+          isOpen={passwordResetModalOpen}
+          onClose={() => {
+            setPasswordResetModalOpen(false)
+            setUserForPasswordReset(null)
+          }}
+          onSuccess={(message) => {
+            setNotification(message)
+            setTimeout(() => setNotification(null), 8000)
+          }}
+          user={userForPasswordReset}
+        />
       </div>
     </DashboardLayout>
   )

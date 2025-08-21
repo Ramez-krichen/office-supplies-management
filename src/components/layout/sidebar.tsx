@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
-import { canAccessFeature, getUserAccessConfig } from '@/lib/access-control'
+import { getUserAccessConfig } from '@/lib/access-control'
 import { useUserPermissions, hasPermission } from '@/hooks/useUserPermissions'
 import {
   LayoutDashboard,
@@ -17,11 +17,12 @@ import {
   LogOut,
   Building2,
   Building,
-  Activity,
   Zap,
   Menu,
   X,
-  User
+  User,
+  ClipboardList,
+  Shield
 } from 'lucide-react'
 
 // Function to get navigation items based on user role using enhanced access control
@@ -47,6 +48,9 @@ const getNavigationForRole = (userRole: string | undefined, userPermissions: str
   }
   if (accessConfig.dashboards.personalDashboard) {
     dashboardItems.push({ name: 'Personal Dashboard', href: '/dashboard/employee', icon: LayoutDashboard })
+  }
+  if (accessConfig.dashboards.requestsDashboard) {
+    dashboardItems.push({ name: 'Requests Dashboard', href: '/dashboard/requests', icon: ClipboardList })
   }
 
   // Feature access based on configuration
@@ -84,7 +88,7 @@ const getNavigationForRole = (userRole: string | undefined, userPermissions: str
     navigationItems.push({ name: 'Departments', href: '/departments', icon: Building })
   }
   if (accessConfig.auditLogs.canView) {
-    navigationItems.push({ name: 'Audit Logs', href: '/audit-logs', icon: Activity })
+    navigationItems.push({ name: 'Audit Logs', href: '/audit-logs', icon: Shield })
   }
   if (accessConfig.settings.canView) {
     navigationItems.push({ name: 'Settings', href: '/settings', icon: Settings })
@@ -151,10 +155,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobile
       
         <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
           {getNavigationForRole(session?.user?.role, permissions).map((item) => {
-            // Skip items that require a specific role if user doesn't have it
-            if (item.requiredRole && session?.user?.role !== item.requiredRole) {
-              return null
-            }
             
             const isActive = pathname === item.href
             return (

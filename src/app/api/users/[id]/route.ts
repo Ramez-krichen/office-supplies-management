@@ -13,7 +13,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     const body = await request.json()
     const { name, email, password, role, department, status } = body
-    const { id } = await params
+    const { id } = params
 
     // Get current user data
     const currentUser = await prisma.user.findUnique({
@@ -55,7 +55,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       )
     }
 
-    const updateData: any = {
+    const updateData: {
+      name?: string
+      email?: string
+      role?: string
+      department?: string
+      status?: string
+      password?: string
+    } = {
       name,
       email,
       role,
@@ -89,7 +96,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = params
 
     // Check if this is the main admin user
     const userToDelete = await prisma.user.findUnique({

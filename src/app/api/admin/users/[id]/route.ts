@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
-import bcrypt from 'bcryptjs'
-import { checkAndNotifyMultipleManagers } from '@/lib/manager-assignment'
+import { userHooks } from '@/lib/manager-assignment-hooks'
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -15,12 +14,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params
     const body = await request.json()
-    const { name, email, role, department, status, password } = body
+    const { name, email, role, department, status } = body
 
     // Get current user data
     const currentUser = await db.user.findUnique({
       where: { id },
-      select: { email: true, role: true, status: true }
+      select: { email: true, role: true, status: true, departmentId: true, department: true }
     })
 
     if (!currentUser) {
@@ -57,20 +56,35 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
+    // Find department by name to get departmentId
+    let departmentId = currentUser.departmentId
+    if (department && department !== currentUser.department) {
+      const dept = await db.department.findFirst({
+        where: { name: department }
+      })
+      departmentId = dept?.id || null
+    }
+
     // Prepare update data
-    const updateData: any = {
+    const updateData: {
+      name?: string
+      email?: string
+      role?: string
+      department?: string
+      departmentId?: string | null
+      status?: string
+      updatedAt: Date
+    } = {
       name,
       email,
       role,
       department,
+      departmentId,
       status,
       updatedAt: new Date()
     }
 
-    // Hash password if provided
-    if (password && password.trim() !== '') {
-      updateData.password = await bcrypt.hash(password, 12)
-    }
+    // Note: Password changes are now handled through the dedicated reset-password endpoint
 
     // Update user
     const updatedUser = await db.user.update({
@@ -89,22 +103,35 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     })
 
-    // Check if this is a manager role change or status change that affects manager assignments
-    const isManagerRoleChange = (role === 'MANAGER' && currentUser.role !== 'MANAGER') ||
-                                (currentUser.role === 'MANAGER' && role !== 'MANAGER')
-    const isManagerStatusChange = currentUser.role === 'MANAGER' &&
-                                 currentUser.status !== status &&
-                                 (status === 'ACTIVE' || status === 'INACTIVE')
-
-    // If manager-related changes occurred, check for multiple managers and create notifications
-    if (isManagerRoleChange || isManagerStatusChange || role === 'MANAGER') {
-      try {
-        await checkAndNotifyMultipleManagers()
-      } catch (error) {
-        console.error('Error checking for multiple managers after user update:', error)
-        // Continue without failing the user update
+    // Trigger manager assignment hooks after user update
+    try {
+      const previousData = {
+        role: currentUser.role,
+        status: currentUser.status,
+        departmentId: currentUser.departmentId
       }
+      const newData = {
+        role: role || currentUser.role,
+        status: status || currentUser.status,
+        departmentId: departmentId
+      }
+      
+      await userHooks.afterUpdate(id, previousData, newData)
+    } catch (error) {
+      console.error('Error in manager assignment hooks after user update:', error)
+      // Continue without failing the user update
     }
+
+    // Create audit log entry for user update
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entity: 'User',
+        entityId: id,
+        performedBy: session.user.id,
+        details: `Updated user: ${updatedUser.email || updatedUser.name || id}`,
+      },
+    })
 
     return NextResponse.json(updatedUser)
   } catch (error) {
@@ -132,7 +159,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         id: true,
         name: true,
         email: true,
-        password: true, // Include password for admin view
+        // Remove password from admin view for security
         role: true,
         department: true,
         status: true,
@@ -188,6 +215,19 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const deletedUser = await db.user.delete({
       where: { id }
     })
+
+    // Trigger manager assignment hooks after user deletion
+    try {
+      const userData = {
+        role: userToDelete.role,
+        status: 'ACTIVE', // Assume was active before deletion
+        departmentId: null // We don't have this info, but hooks will handle it
+      }
+      await userHooks.afterDelete(id, userData)
+    } catch (error) {
+      console.error('Error in manager assignment hooks after user deletion:', error)
+      // Continue without failing the user deletion
+    }
 
     // Create audit log entry for user deletion
     await db.auditLog.create({

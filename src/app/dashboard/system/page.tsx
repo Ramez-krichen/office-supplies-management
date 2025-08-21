@@ -59,6 +59,26 @@ export default function SystemDashboard() {
     title: string
   } | null>(null)
 
+  const fetchSystemMetrics = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/dashboard/system')
+      if (response.ok) {
+        const data = await response.json()
+        setMetrics(data)
+      } else if (response.status === 401) {
+        // Handle authentication errors silently
+        console.log('Authentication required for system metrics')
+      } else {
+        console.error('Error fetching system metrics:', response.status, response.statusText)
+      }
+    } catch (error) {
+      console.error('Error fetching system metrics:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Always call useEffect hook
   useEffect(() => {
     // Only fetch if user is authenticated and is admin
@@ -81,26 +101,6 @@ export default function SystemDashboard() {
   // Handle unauthorized access
   if (!session || session.user.role !== 'ADMIN') {
     redirect('/dashboard')
-  }
-
-  const fetchSystemMetrics = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/dashboard/system')
-      if (response.ok) {
-        const data = await response.json()
-        setMetrics(data)
-      } else if (response.status === 401) {
-        // Handle authentication errors silently
-        console.log('Authentication required for system metrics')
-      } else {
-        console.error('Error fetching system metrics:', response.status, response.statusText)
-      }
-    } catch (error) {
-      console.error('Error fetching system metrics:', error)
-    } finally {
-      setLoading(false)
-    }
   }
 
   if (loading) {

@@ -20,6 +20,7 @@ export interface DashboardAccess {
   systemDashboard: boolean
   departmentDashboard: boolean
   personalDashboard: boolean
+  requestsDashboard: boolean
 }
 
 export interface AccessControlConfig {
@@ -65,7 +66,8 @@ export const ROLE_ACCESS_CONFIG: Record<UserRole, AccessControlConfig> = {
       adminDashboard: true,
       systemDashboard: true,
       departmentDashboard: true,
-      personalDashboard: false // Admins should not have personal dashboard access
+      personalDashboard: false, // Admins should not have personal dashboard access
+      requestsDashboard: false // Only GENERAL_MANAGER can access requests dashboard
     },
     requests: {
       canView: true,
@@ -164,7 +166,8 @@ export const ROLE_ACCESS_CONFIG: Record<UserRole, AccessControlConfig> = {
       adminDashboard: false,
       systemDashboard: false,
       departmentDashboard: true, // Access only to their own department's data
-      personalDashboard: true
+      personalDashboard: true,
+      requestsDashboard: false // Only GENERAL_MANAGER can access requests dashboard
     },
     requests: {
       canView: true,
@@ -264,7 +267,8 @@ export const ROLE_ACCESS_CONFIG: Record<UserRole, AccessControlConfig> = {
       adminDashboard: false, // No access
       systemDashboard: false, // No access
       departmentDashboard: false, // No access
-      personalDashboard: true
+      personalDashboard: true,
+      requestsDashboard: false // Employees cannot track other's requests
     },
     requests: {
       canView: true, // Can create and track personal requests
@@ -359,7 +363,8 @@ export const ROLE_ACCESS_CONFIG: Record<UserRole, AccessControlConfig> = {
       adminDashboard: false,
       systemDashboard: false,
       departmentDashboard: false,
-      personalDashboard: false
+      personalDashboard: false,
+      requestsDashboard: true // General managers can track all requests for approval
     },
     requests: {
       canView: true, // Can view all requests for approval
@@ -419,7 +424,7 @@ export const ROLE_ACCESS_CONFIG: Record<UserRole, AccessControlConfig> = {
       departmentRestricted: false
     },
     auditLogs: {
-      canView: true, // Full audit trail visibility
+      canView: false, // Removed audit logs access
       canCreate: false,
       canEdit: false,
       canDelete: false,

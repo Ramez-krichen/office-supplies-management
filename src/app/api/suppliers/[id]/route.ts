@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 // GET /api/suppliers/[id] - Get supplier by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const accessCheck = await checkAccess(createFeatureAccessCheck('SUPPLIERS', 'view')())
@@ -16,8 +16,9 @@ export async function GET(
       return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
     }
 
+    const { id } = await params
     const supplier = await prisma.supplier.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: true,
         purchaseOrders: {
@@ -43,7 +44,7 @@ export async function GET(
 // PUT /api/suppliers/[id] - Update supplier
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const accessCheck = await checkAccess(createFeatureAccessCheck('SUPPLIERS', 'edit')())
@@ -65,7 +66,7 @@ export async function PUT(
       contactPerson
     } = body
     
-    const supplierId = params.id
+    const { id: supplierId } = await params
 
     // Check if supplier exists
     const existingSupplier = await prisma.supplier.findUnique({
@@ -144,7 +145,7 @@ export async function PUT(
 // DELETE /api/suppliers/[id] - Delete supplier
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const accessCheck = await checkAccess(createFeatureAccessCheck('SUPPLIERS', 'delete')())
@@ -157,7 +158,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    const supplierId = params.id
+    const { id: supplierId } = await params
 
     // Check if supplier exists
     const existingSupplier = await prisma.supplier.findUnique({

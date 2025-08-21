@@ -70,7 +70,7 @@ export default function UsersPage() {
 
     const fetchUsers = async () => {
       try {
-        const response = await fetch('/api/users');
+        const response = await fetch('/api/admin/users');
         if (!response.ok) {
           throw new Error('Failed to fetch users');
         }
@@ -106,7 +106,7 @@ export default function UsersPage() {
   
   const handleAddUser = async (userData: Partial<User>, password?: string) => {
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...userData, password }),
@@ -136,7 +136,7 @@ export default function UsersPage() {
   const handleEditUser = async (userData: Partial<User>) => {
     if (!editingUser) return;
     try {
-      const response = await fetch(`/api/users/${editingUser.id}`, {
+      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
@@ -171,7 +171,7 @@ export default function UsersPage() {
     setIsDeactivating(true);
     try {
       const newStatus = userToDeactivate.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      const response = await fetch(`/api/users/${userToDeactivate.id}`, {
+      const response = await fetch(`/api/admin/users/${userToDeactivate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -206,7 +206,7 @@ export default function UsersPage() {
     if (!userToDelete) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/users/${userToDelete.id}`, {
+      const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

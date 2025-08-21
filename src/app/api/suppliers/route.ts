@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { checkAccess, createFeatureAccessCheck } from '@/lib/server-access-control'
+import { detectAndUpdateSupplierCategories, parseSupplierCategories } from '@/lib/supplier-category-detection'
 
 // GET /api/suppliers - List all suppliers
 export async function GET(request: NextRequest) {
@@ -67,19 +68,20 @@ export async function GET(request: NextRequest) {
       phone: supplier.phone || '',
       address: supplier.address || '',
       contactPerson: supplier.contactPerson || '',
-      contactTitle: '', // Not in schema, default empty
-      website: '', // Not in schema, default empty
-      taxId: '', // Not in schema, default empty
-      paymentTerms: 'Net 30', // Default payment terms
+      contactTitle: supplier.contactTitle || '',
+      website: supplier.website || '',
+      taxId: supplier.taxId || '',
+      paymentTerms: supplier.paymentTerms || 'Net 30',
       itemsCount: supplier.items.length,
       totalOrders: supplier.purchaseOrders.length,
       lastOrderDate: supplier.purchaseOrders[0]?.orderDate.toISOString().split('T')[0] || '',
-      status: 'Active' as const, // Default status
-      rating: 0, // Default rating
-      categories: [], // Default empty categories
+      status: 'Active' as const,
+      rating: 0,
+      categories: parseSupplierCategories(supplier.categories),
+      categoriesDetectedAt: supplier.categoriesDetectedAt?.toISOString() || null,
       createdAt: supplier.createdAt.toISOString().split('T')[0],
       updatedAt: supplier.updatedAt.toISOString().split('T')[0],
-      notes: '' // Default empty notes
+      notes: supplier.notes || ''
     }))
 
     return NextResponse.json({
@@ -114,7 +116,13 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       address,
-      contactPerson
+      contactPerson,
+      contactTitle,
+      website,
+      taxId,
+      paymentTerms,
+      notes,
+      categories
     } = body
 
     // Validate required fields
@@ -165,16 +173,31 @@ export async function POST(request: NextRequest) {
         phone: phone ? phone.trim() : null,
         address: address ? address.trim() : null,
         contactPerson: contactPerson ? contactPerson.trim() : null,
-        // Add optional fields if they exist in the request
-        website: body.website ? body.website.trim() : null,
-        taxId: body.taxId ? body.taxId.trim() : null,
-        paymentTerms: body.paymentTerms ? body.paymentTerms.trim() : null,
-        notes: body.notes ? body.notes.trim() : null
+        contactTitle: contactTitle ? contactTitle.trim() : null,
+        website: website ? website.trim() : null,
+        taxId: taxId ? taxId.trim() : null,
+        paymentTerms: paymentTerms ? paymentTerms.trim() : null,
+        notes: notes ? notes.trim() : null,
+        categories: categories && Array.isArray(categories) ? JSON.stringify(categories) : null,
+        categoriesDetectedAt: categories && Array.isArray(categories) ? new Date() : null
       }
 
       const newSupplier = await prisma.supplier.create({
         data: sanitizedData
       })
+
+      // If no manual categories provided, try to auto-detect from existing items
+      // (This would be useful if items are added before supplier creation in some workflows)
+      if (!categories || categories.length === 0) {
+        // Schedule category detection for later (after items might be added)
+        setTimeout(async () => {
+          try {
+            await detectAndUpdateSupplierCategories(newSupplier.id)
+          } catch (error) {
+            console.error('Error in background category detection:', error)
+          }
+        }, 1000)
+      }
 
       // Create audit log in a separate try-catch to ensure it doesn't affect the main operation
       try {

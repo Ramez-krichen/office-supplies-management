@@ -3,6 +3,7 @@ import { db as prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { checkAccess, createFeatureAccessCheck } from '@/lib/server-access-control'
+import type { Prisma } from '@prisma/client'
 
 // GET /api/items - List all items
 export async function GET(request: NextRequest) {
@@ -11,8 +12,6 @@ export async function GET(request: NextRequest) {
     if (!accessCheck.hasAccess) {
       return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
     }
-
-    const { user, userRole, userDepartment, requiresDepartmentFiltering } = accessCheck
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: any = {}
+    const where: Prisma.ItemWhereInput = {}
 
     // Note: Inventory items are global and not department-specific in the current schema
     // Department restriction for managers applies to other features like requests and reports
@@ -36,11 +35,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (status && status !== 'ALL') {
-      if (status === 'low-stock') {
-        where.currentStock = {
-          lte: prisma.item.fields.minStock
-        }
-      } else if (status === 'out-of-stock') {
+      if (status === 'out-of-stock') {
         where.currentStock = 0
       } else if (status === 'in-stock') {
         where.currentStock = {
@@ -49,17 +44,18 @@ export async function GET(request: NextRequest) {
       } else if (status === 'discontinued') {
         where.isActive = false
       }
+      // Note: low-stock filtering will be handled after data fetch since Prisma doesn't support field-to-field comparison
     }
     
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { reference: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { reference: { contains: search } },
+        { description: { contains: search } }
       ]
     }
 
-    const [items, total] = await Promise.all([
+    let [items, total] = await Promise.all([
       prisma.item.findMany({
         where,
         select: {
@@ -75,6 +71,7 @@ export async function GET(request: NextRequest) {
           isEcoFriendly: true,
           ecoRating: true,
           carbonFootprint: true,
+          recyclable: true,
           updatedAt: true,
           category: {
             select: {
@@ -93,6 +90,12 @@ export async function GET(request: NextRequest) {
       }),
       prisma.item.count({ where })
     ])
+
+    // Handle low-stock filtering after data fetch
+    if (status === 'low-stock') {
+      items = items.filter(item => item.currentStock > 0 && item.currentStock <= item.minStock)
+      total = items.length // Update total count for low-stock items
+    }
 
     // Transform data to match frontend interface
     const transformedItems = items.map(item => ({
@@ -150,8 +153,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
     }
 
-    const { user, userRole, userDepartment, requiresDepartmentFiltering } = accessCheck
-
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -168,7 +169,6 @@ export async function POST(request: NextRequest) {
       currentStock,
       categoryId,
       supplierId,
-      department,
       isEcoFriendly,
       ecoRating,
       carbonFootprint,

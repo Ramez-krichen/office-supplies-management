@@ -22,7 +22,7 @@ export const DASHBOARD_ACCESS = {
     allowedRoles: ['MANAGER', 'ADMIN'] as UserRole[]
   },
   ADMIN: {
-    requireRole: 'ADMIN' as UserRole
+    allowedRoles: ['ADMIN'] as UserRole[]
   },
   DEPARTMENT: {
     allowedRoles: ['MANAGER', 'ADMIN'] as UserRole[]
@@ -113,6 +113,8 @@ export function canAccessDashboardType(userRole: string | undefined, dashboardTy
       case 'employee':
       case 'personal':
         return hasDashboardAccess(userRole as UserRole, 'personalDashboard')
+      case 'requests':
+        return hasDashboardAccess(userRole as UserRole, 'requestsDashboard')
       default:
         return false
     }

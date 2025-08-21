@@ -86,7 +86,7 @@ export async function GET() {
 
         const monthlyPOSpending = await prisma.purchaseOrder.aggregate({
           where: {
-            status: { in: ['ORDERED', 'RECEIVED'] },
+            status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
             createdAt: { gte: currentMonth },
             createdBy: { departmentId: dept.id }
           },

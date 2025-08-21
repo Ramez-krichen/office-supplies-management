@@ -49,98 +49,191 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Department not found' }, { status: 404 })
     }
 
-    // Department-specific statistics using departmentId
-    const departmentRequests = await prisma.request.count({
-      where: {
-        requester: { departmentId: department.id }
-      }
-    })
+    // Optimize database queries by running them in parallel
+    const [
+      departmentRequests,
+      pendingRequests,
+      approvedRequests,
+      rejectedRequests,
+      departmentUsers,
+      totalRequests,
+      totalPOSpending,
+      monthlyRequests,
+      monthlyPOSpending,
+      quarterlyRequests,
+      quarterlyPOSpending,
+      topRequesters,
+      recentRequests,
+      averageApprovalTime
+    ] = await Promise.all([
+      // Basic request counts
+      prisma.request.count({
+        where: { requester: { departmentId: department.id } }
+      }),
+      prisma.request.count({
+        where: {
+          status: 'PENDING',
+          requester: { departmentId: department.id }
+        }
+      }),
+      prisma.request.count({
+        where: {
+          status: 'APPROVED',
+          requester: { departmentId: department.id }
+        }
+      }),
+      prisma.request.count({
+        where: {
+          status: 'REJECTED',
+          requester: { departmentId: department.id }
+        }
+      }),
 
-    const pendingRequests = await prisma.request.count({
-      where: {
-        status: 'PENDING',
-        requester: { departmentId: department.id }
-      }
-    })
+      // Department team information
+      prisma.user.findMany({
+        where: { departmentId: department.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          lastSignIn: true
+        },
+        orderBy: { name: 'asc' }
+      }),
 
-    const approvedRequests = await prisma.request.count({
-      where: {
-        status: 'APPROVED',
-        requester: { departmentId: department.id }
-      }
-    })
-
-    const rejectedRequests = await prisma.request.count({
-      where: {
-        status: 'REJECTED',
-        requester: { departmentId: department.id }
-      }
-    })
-
-    // Department team information using the new departmentId relationship
-    const departmentUsers = await prisma.user.findMany({
-      where: { departmentId: department.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        lastSignIn: true
-      },
-      orderBy: { name: 'asc' }
-    })
-
-    // Department spending analysis
-    const totalRequests = await prisma.request.findMany({
-      where: {
-        status: { in: ['APPROVED', 'COMPLETED'] },
-        requester: { departmentId: department.id }
-      },
-      include: {
-        items: {
-          include: {
-            item: true
+      // Total spending - requests
+      prisma.request.findMany({
+        where: {
+          status: { in: ['APPROVED', 'COMPLETED'] },
+          requester: { departmentId: department.id }
+        },
+        include: {
+          items: {
+            include: { item: true }
           }
         }
-      }
-    })
+      }),
 
+      // Total spending - purchase orders
+      prisma.purchaseOrder.aggregate({
+        where: {
+          status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
+          createdBy: { departmentId: department.id }
+        },
+        _sum: { totalAmount: true }
+      }),
+
+      // Monthly spending - requests
+      prisma.request.findMany({
+        where: {
+          status: { in: ['APPROVED', 'COMPLETED'] },
+          createdAt: { gte: currentMonth },
+          requester: { departmentId: department.id }
+        },
+        include: {
+          items: {
+            include: { item: true }
+          }
+        }
+      }),
+
+      // Monthly spending - purchase orders
+      prisma.purchaseOrder.aggregate({
+        where: {
+          status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
+          createdAt: { gte: currentMonth },
+          createdBy: { departmentId: department.id }
+        },
+        _sum: { totalAmount: true }
+      }),
+
+      // Quarterly spending - requests
+      prisma.request.findMany({
+        where: {
+          status: { in: ['APPROVED', 'COMPLETED'] },
+          createdAt: { gte: lastQuarter },
+          requester: { departmentId: department.id }
+        },
+        include: {
+          items: {
+            include: { item: true }
+          }
+        }
+      }),
+
+      // Quarterly spending - purchase orders
+      prisma.purchaseOrder.aggregate({
+        where: {
+          status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
+          createdAt: { gte: lastQuarter },
+          createdBy: { departmentId: department.id }
+        },
+        _sum: { totalAmount: true }
+      }),
+
+      // Top requesters
+      prisma.request.groupBy({
+        by: ['requesterId'],
+        where: {
+          requester: { departmentId: department.id },
+          createdAt: { gte: lastQuarter }
+        },
+        _count: { id: true },
+        _sum: { totalAmount: true },
+        orderBy: { _sum: { totalAmount: 'desc' } },
+        take: 5
+      }),
+
+      // Recent requests
+      prisma.request.findMany({
+        where: {
+          requester: { departmentId: department.id }
+        },
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          requester: {
+            select: {
+              name: true,
+              email: true
+            }
+          },
+          items: {
+            include: {
+              item: {
+                select: {
+                  name: true,
+                  unit: true,
+                  price: true
+                }
+              }
+            }
+          }
+        }
+      }),
+
+      // Average approval time
+      prisma.request.findMany({
+        where: {
+          status: { in: ['APPROVED', 'REJECTED'] },
+          requester: { departmentId: department.id },
+          createdAt: { gte: lastMonth }
+        },
+        select: {
+          createdAt: true,
+          updatedAt: true
+        }
+      })
+    ])
+
+    // Calculate spending totals
     const totalRequestSpending = totalRequests.reduce((total, request) => {
       return total + request.items.reduce((itemTotal, requestItem) => {
         return itemTotal + (requestItem.totalPrice || (requestItem.item.price * requestItem.quantity))
       }, 0)
     }, 0)
-
-    // Get total purchase orders spending for this department
-    const totalPOSpending = await prisma.purchaseOrder.aggregate({
-      where: {
-        status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
-        createdBy: { departmentId: department.id }
-      },
-      _sum: { totalAmount: true }
-    })
-
-    const totalSpending = {
-      _sum: {
-        totalAmount: totalRequestSpending + (totalPOSpending._sum.totalAmount || 0)
-      }
-    }
-
-    const monthlyRequests = await prisma.request.findMany({
-      where: {
-        status: { in: ['APPROVED', 'COMPLETED'] },
-        createdAt: { gte: currentMonth },
-        requester: { departmentId: department.id }
-      },
-      include: {
-        items: {
-          include: {
-            item: true
-          }
-        }
-      }
-    })
 
     const monthlyRequestSpending = monthlyRequests.reduce((total, request) => {
       return total + request.items.reduce((itemTotal, requestItem) => {
@@ -148,83 +241,18 @@ export async function GET(request: Request) {
       }, 0)
     }, 0)
 
-    // Get monthly purchase orders spending for this department
-    const monthlyPOSpending = await prisma.purchaseOrder.aggregate({
-      where: {
-        status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
-        createdAt: { gte: currentMonth },
-        createdBy: { departmentId: department.id }
-      },
-      _sum: { totalAmount: true }
-    })
-
-    const monthlySpending = {
-      _sum: {
-        totalAmount: monthlyRequestSpending + (monthlyPOSpending._sum.totalAmount || 0)
-      }
-    }
-
-    const quarterlyRequests = await prisma.request.findMany({
-      where: {
-        status: { in: ['APPROVED', 'COMPLETED'] },
-        createdAt: { gte: lastQuarter },
-        requester: { departmentId: department.id }
-      },
-      include: {
-        items: {
-          include: {
-            item: true
-          }
-        }
-      }
-    })
-
     const quarterlyRequestSpending = quarterlyRequests.reduce((total, request) => {
       return total + request.items.reduce((itemTotal, requestItem) => {
         return itemTotal + (requestItem.totalPrice || (requestItem.item.price * requestItem.quantity))
       }, 0)
     }, 0)
 
-    // Get quarterly purchase orders spending for this department
-    const quarterlyPOSpending = await prisma.purchaseOrder.aggregate({
-      where: {
-        status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
-        createdAt: { gte: lastQuarter },
-        createdBy: { departmentId: department.id }
-      },
-      _sum: { totalAmount: true }
-    })
+    // Calculate total spending
+    const totalSpending = totalRequestSpending + (totalPOSpending._sum.totalAmount || 0)
+    const monthlySpending = monthlyRequestSpending + (monthlyPOSpending._sum.totalAmount || 0)
+    const quarterlySpending = quarterlyRequestSpending + (quarterlyPOSpending._sum.totalAmount || 0)
 
-    const quarterlySpending = {
-      _sum: {
-        totalAmount: quarterlyRequestSpending + (quarterlyPOSpending._sum.totalAmount || 0)
-      }
-    }
-
-    // Department requests by status over time
-    const requestsByMonth = await prisma.request.groupBy({
-      by: ['status'],
-      where: {
-        requester: { departmentId: department.id },
-        createdAt: { gte: lastQuarter }
-      },
-      _count: { id: true }
-    })
-
-    // Top requesters in department
-    const topRequesters = await prisma.request.groupBy({
-      by: ['requesterId'],
-      where: {
-        requester: { departmentId: department.id },
-        createdAt: { gte: lastQuarter }
-      },
-      _count: { id: true },
-      _sum: { totalAmount: true },
-      orderBy: { _sum: { totalAmount: 'desc' } },
-      take: 5
-    })
-
-    // Get user details for top requesters
+    // Get user details for top requesters in parallel
     const topRequesterDetails = await Promise.all(
       topRequesters.map(async (requester) => {
         const user = await prisma.user.findUnique({
@@ -240,47 +268,7 @@ export async function GET(request: Request) {
       })
     )
 
-    // Recent department activity
-    const recentRequests = await prisma.request.findMany({
-      where: {
-        requester: { departmentId: department.id }
-      },
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        requester: {
-          select: {
-            name: true,
-            email: true
-          }
-        },
-        items: {
-          include: {
-            item: {
-              select: {
-                name: true,
-                unit: true,
-                price: true
-              }
-            }
-          }
-        }
-      }
-    })
-
-    // Department performance metrics
-    const averageApprovalTime = await prisma.request.findMany({
-      where: {
-        status: { in: ['APPROVED', 'REJECTED'] },
-        requester: { departmentId: department.id },
-        createdAt: { gte: lastMonth }
-      },
-      select: {
-        createdAt: true,
-        updatedAt: true
-      }
-    })
-
+    // Calculate average approval time
     const avgApprovalHours = averageApprovalTime.length > 0
       ? averageApprovalTime.reduce((sum, req) => {
           const hours = (req.updatedAt.getTime() - req.createdAt.getTime()) / (1000 * 60 * 60)
@@ -311,8 +299,8 @@ export async function GET(request: Request) {
       },
       {
         name: 'Monthly Spending',
-        value: `$${(monthlySpending._sum.totalAmount || 0).toFixed(2)}`,
-        change: `Quarterly: $${(quarterlySpending._sum.totalAmount || 0).toFixed(2)}`,
+        value: `$${monthlySpending.toFixed(2)}`,
+        change: `Quarterly: $${quarterlySpending.toFixed(2)}`,
         changeType: 'neutral' as const
       },
       {
@@ -340,12 +328,11 @@ export async function GET(request: Request) {
       recentRequests: formattedRecentRequests,
       departmentUsers,
       topRequesters: topRequesterDetails,
-      requestsByStatus: requestsByMonth,
       departmentInfo: {
         name: department.name,
-        totalSpending: totalSpending._sum.totalAmount || 0,
-        monthlySpending: monthlySpending._sum.totalAmount || 0,
-        quarterlySpending: quarterlySpending._sum.totalAmount || 0
+        totalSpending,
+        monthlySpending,
+        quarterlySpending
       }
     })
   } catch (error) {

@@ -197,6 +197,11 @@ function RequestsPageContent() {
   const fetchUsers = async () => {
     if (users.length > 0) return // Don't fetch if already loaded
 
+    // Only fetch users if the current user has permission to view them
+    if (!session?.user?.role || !canAccessFeature(session.user.role, 'users', 'view')) {
+      return
+    }
+
     setIsLoadingUsers(true)
     try {
       const response = await fetch('/api/users')
@@ -209,7 +214,10 @@ function RequestsPageContent() {
           department: user.department
         })))
       } else {
-        console.error('Failed to fetch users:', response.statusText)
+        // Don't show error for forbidden access, just silently fail
+        if (response.status !== 403) {
+          console.error('Failed to fetch users:', response.statusText)
+        }
       }
     } catch (error) {
       console.error('Error fetching users:', error)

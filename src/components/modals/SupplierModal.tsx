@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal } from '../ui/modal'
 import { FormField, Input, Select, Textarea, FormActions } from '../ui/form'
-import { Building2, Plus, Edit, Eye } from 'lucide-react'
+import { Building2, Plus, Edit, Eye, Zap, Clock, CheckCircle } from 'lucide-react'
 
 interface Supplier {
   id: string
@@ -23,6 +23,7 @@ interface Supplier {
   rating?: number
   notes?: string
   categories?: string[]
+  categoriesDetectedAt?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -54,6 +55,14 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
   })
   const [errors, setErrors] = useState<Record<string, string>>({ form: '' })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDetectingCategories, setIsDetectingCategories] = useState(false)
+  const [categoryDetectionResult, setCategoryDetectionResult] = useState<{
+    success: boolean
+    message: string
+    categories: string[]
+    summary: string
+    detectedAt?: string
+  } | null>(null)
 
   useEffect(() => {
     if (initialData && (mode === 'edit' || mode === 'view')) {
@@ -88,27 +97,24 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
       })
     }
     setErrors({})
+    setCategoryDetectionResult(null)
   }, [initialData, mode, isOpen])
 
   const validateForm = () => {
-    // Start with empty errors but keep the form field
     const newErrors: Record<string, string> = { form: '' }
 
-    // Name validation - required
     if (!formData.name.trim()) {
       newErrors.name = 'Company name is required'
     } else if (formData.name.trim().length > 100) {
       newErrors.name = 'Company name must be less than 100 characters'
     }
 
-    // Contact person validation - required
     if (!formData.contactPerson.trim()) {
       newErrors.contactPerson = 'Contact person is required'
     } else if (formData.contactPerson.trim().length > 100) {
       newErrors.contactPerson = 'Contact person name must be less than 100 characters'
     }
 
-    // Email validation - required
     if (!formData.email.trim()) {
       newErrors.email = 'Email address is required'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -117,30 +123,25 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
       newErrors.email = 'Email must be less than 255 characters'
     }
 
-    // Phone validation - required
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required'
     } else {
-      // Remove all non-digit characters except + for international format
       const cleanedPhone = formData.phone.replace(/[\s\-\(\)]/g, '')
       if (!/^[\+]?[0-9]{6,20}$/.test(cleanedPhone)) {
         newErrors.phone = 'Please enter a valid phone number (6-20 digits)'
       }
     }
 
-    // Address validation - required
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required'
     } else if (formData.address.trim().length > 500) {
       newErrors.address = 'Address must be less than 500 characters'
     }
 
-    // Website validation - optional but format check if provided
     if (formData.website && formData.website.trim() && !/^(https?:\/\/)?([\w\-])+\.{1}([a-zA-Z]{2,63})([\/\w-]*)*\/?$/.test(formData.website)) {
       newErrors.website = 'Please enter a valid website URL'
     }
 
-    // Remove the form field from errors if no actual errors exist
     const actualErrors = Object.keys(newErrors).filter(key => key !== 'form' && newErrors[key])
     if (actualErrors.length === 0) {
       delete newErrors.form
@@ -148,6 +149,60 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
 
     setErrors(newErrors)
     return actualErrors.length === 0
+  }
+
+  const handleDetectCategories = async () => {
+    if (!initialData?.id) {
+      setCategoryDetectionResult({
+        success: false,
+        message: 'Cannot detect categories: Supplier must be saved first',
+        categories: [],
+        summary: 'Save the supplier first, then add items to enable category detection'
+      })
+      return
+    }
+
+    setIsDetectingCategories(true)
+    setCategoryDetectionResult(null)
+
+    try {
+      const response = await fetch(`/api/suppliers/${initialData.id}/detect-categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setCategoryDetectionResult(result)
+        
+        if (result.success && result.categories) {
+          setFormData(prev => ({
+            ...prev,
+            categories: result.categories
+          }))
+        }
+      } else {
+        setCategoryDetectionResult({
+          success: false,
+          message: result.error || 'Failed to detect categories',
+          categories: [],
+          summary: 'Category detection failed'
+        })
+      }
+    } catch (error) {
+      console.error('Error detecting categories:', error)
+      setCategoryDetectionResult({
+        success: false,
+        message: 'Network error occurred while detecting categories',
+        categories: [],
+        summary: 'Please try again later'
+      })
+    } finally {
+      setIsDetectingCategories(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,7 +219,6 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
 
     setIsSubmitting(true)
     try {
-      // Sanitize and prepare data
       const sanitizedData = {
         ...formData,
         name: formData.name.trim(),
@@ -183,18 +237,14 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
     } catch (error) {
       console.error('Error saving supplier:', error)
       
-      // Display error in the form
       if (error instanceof Error) {
-        // Check for specific error types
         const errorMessage = error.message
         
         if (errorMessage.includes('name already exists')) {
           setErrors(prev => ({ ...prev, name: 'A supplier with this name already exists' }))
         } else if (errorMessage.includes('Database error')) {
-          // Show a general error at the form level
           setErrors(prev => ({ ...prev, form: 'Database error. Please try again later.' }))
         } else {
-          // Show the error message
           setErrors(prev => ({ ...prev, form: errorMessage }))
         }
       } else {
@@ -222,7 +272,6 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
     { value: 'Inactive', label: 'Inactive' }
   ]
 
-  // Render stars for rating in view mode
   const renderStars = (rating: number = 0) => {
     return Array.from({ length: 5 }, (_, i) => (
       <span key={i} className={`text-lg ${
@@ -233,7 +282,6 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
     ))
   }
 
-  // View mode content
   if (mode === 'view') {
     return (
       <Modal
@@ -297,8 +345,16 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Categories</label>
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">Categories</label>
+                {initialData?.categoriesDetectedAt && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="h-3 w-3" />
+                    <span>Auto-detected {new Date(initialData.categoriesDetectedAt).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
               <div className="flex flex-wrap gap-1">
                 {formData.categories.map((category, index) => (
                   <span key={index} className="inline-flex px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
@@ -375,7 +431,6 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
     )
   }
 
-  // Edit/Add mode content
   return (
     <Modal
       isOpen={isOpen}
@@ -384,7 +439,6 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Form-level error display */}
         {errors.form && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
             <span className="block sm:inline">{errors.form}</span>
@@ -449,7 +503,57 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
           </FormField>
 
           <FormField label="Categories" error={errors.categories}>
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {mode === 'edit' && initialData?.id && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">Auto-detect Categories</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDetectCategories}
+                      disabled={isDetectingCategories}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
+                      {isDetectingCategories ? (
+                        <>
+                          <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full"></div>
+                          <span>Detecting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-3 w-3" />
+                          <span>Detect</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    Automatically detect categories based on the products this supplier provides
+                  </p>
+                  
+                  {categoryDetectionResult && (
+                    <div className={`mt-2 p-2 rounded text-xs ${
+                      categoryDetectionResult.success 
+                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                        : 'bg-red-100 text-red-800 border border-red-200'
+                    }`}>
+                      <div className="flex items-center gap-1 mb-1">
+                        {categoryDetectionResult.success ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : (
+                          <Eye className="h-3 w-3" />
+                        )}
+                        <span className="font-medium">{categoryDetectionResult.message}</span>
+                      </div>
+                      <p>{categoryDetectionResult.summary}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2 mb-2">
                 {formData.categories.map((category, index) => (
                   <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -461,7 +565,6 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
                         const newCategories = [...formData.categories];
                         newCategories.splice(index, 1);
                         setFormData(prev => ({ ...prev, categories: newCategories }));
-                        // Clear category error if categories were previously empty
                         if (errors.categories && newCategories.length > 0) {
                           setErrors(prev => ({ ...prev, categories: '' }));
                         }
@@ -472,68 +575,69 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
                   </span>
                 ))}
               </div>
+
               <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <Select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value && !formData.categories.includes(e.target.value)) {
-                          setFormData(prev => ({
-                            ...prev,
-                            categories: [...prev.categories, e.target.value]
-                          }));
-                          if (errors.categories) {
-                            setErrors(prev => ({ ...prev, categories: '' }));
-                          }
+                <div className="flex gap-2">
+                  <Select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value && !formData.categories.includes(e.target.value)) {
+                        setFormData(prev => ({
+                          ...prev,
+                          categories: [...prev.categories, e.target.value]
+                        }));
+                        if (errors.categories) {
+                          setErrors(prev => ({ ...prev, categories: '' }));
                         }
-                      }}
-                      options={categoryOptions}
-                      error={!!errors.categories}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="custom-category"
-                      placeholder="Or type custom category and click Add"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const input = e.target as HTMLInputElement;
-                          if (input.value && !formData.categories.includes(input.value)) {
-                            setFormData(prev => ({
-                              ...prev,
-                              categories: [...prev.categories, input.value]
-                            }));
-                            if (errors.categories) {
-                              setErrors(prev => ({ ...prev, categories: '' }));
-                            }
-                            input.value = '';
-                          }
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
-                      onClick={() => {
-                        const categoryInput = document.getElementById('custom-category') as HTMLInputElement;
-                        if (categoryInput && categoryInput.value && !formData.categories.includes(categoryInput.value)) {
-                          setFormData(prev => ({
-                            ...prev,
-                            categories: [...prev.categories, categoryInput.value]
-                          }));
-                          if (errors.categories) {
-                            setErrors(prev => ({ ...prev, categories: '' }));
-                          }
-                          categoryInput.value = '';
-                        }
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                      <span>Add</span>
-                    </button>
-                  </div>
+                      }
+                    }}
+                    options={categoryOptions}
+                    error={!!errors.categories}
+                  />
                 </div>
+                <div className="flex gap-2">
+                  <Input
+                    id="custom-category"
+                    placeholder="Or type custom category and click Add"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const input = e.target as HTMLInputElement;
+                        if (input.value && !formData.categories.includes(input.value)) {
+                          setFormData(prev => ({
+                            ...prev,
+                            categories: [...prev.categories, input.value]
+                          }));
+                          if (errors.categories) {
+                            setErrors(prev => ({ ...prev, categories: '' }));
+                          }
+                          input.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    onClick={() => {
+                      const categoryInput = document.getElementById('custom-category') as HTMLInputElement;
+                      if (categoryInput && categoryInput.value && !formData.categories.includes(categoryInput.value)) {
+                        setFormData(prev => ({
+                          ...prev,
+                          categories: [...prev.categories, categoryInput.value]
+                        }));
+                        if (errors.categories) {
+                          setErrors(prev => ({ ...prev, categories: '' }));
+                        }
+                        categoryInput.value = '';
+                      }
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
               {errors.categories && <p className="text-sm text-red-500 mt-1">{errors.categories}</p>}
             </div>
           </FormField>
@@ -602,5 +706,3 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
     </Modal>
   )
 }
-
-// We don't need a separate ViewSupplierModal component anymore since we've integrated view mode into the main SupplierModal component

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { checkAccess, createFeatureAccessCheck } from '@/lib/server-access-control'
 import { isGeneralManager, canGeneralManagerApproveRequest, logGeneralManagerAction } from '@/lib/general-manager-access-control'
+import { triggerRequestStatusNotification } from '@/lib/notification-triggers'
 
 export async function POST(
   request: NextRequest,
@@ -259,6 +260,23 @@ export async function POST(
       })
     }
     console.log(`✅ Audit log created successfully`)
+
+    // Trigger notification for request status change
+    try {
+      await triggerRequestStatusNotification({
+        requestId,
+        requestTitle: existingRequest.title,
+        oldStatus: existingRequest.status,
+        newStatus: status === 'APPROVED' ? (newStatus || 'APPROVED') : 'REJECTED',
+        approverName: user.name || user.email,
+        comments: comments || undefined,
+        department: existingRequest.department || undefined,
+      })
+      console.log(`✅ Notification sent for request status change`)
+    } catch (notificationError) {
+      console.error('❌ Error sending notification:', notificationError)
+      // Don't fail the approval process if notification fails
+    }
 
     console.log(`✅ Request ${requestId} ${status.toLowerCase()} successfully`)
 

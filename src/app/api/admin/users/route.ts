@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
-import { autoAssignManagerToDepartment, checkAndNotifyMultipleManagers } from '@/lib/manager-assignment'
+import { userHooks } from '@/lib/manager-assignment-hooks'
+import { triggerEmployeeAssignmentNotification } from '@/lib/notification-triggers'
 
 export async function GET(request: NextRequest) {
   // Check if user is authenticated and is an admin
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     const roleFilter = searchParams.get('role')
 
     // Build where clause
-    const where: any = {}
+    const where: { role?: string } = {}
     if (roleFilter) {
       where.role = roleFilter
     }
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       }
 
       // If both role and status are the same, sort by name alphabetically
-      return a.name.localeCompare(b.name)
+      return (a.name || '').localeCompare(b.name || '')
     })
 
     // Return in the format expected by the frontend
@@ -173,33 +174,47 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // If this is a manager and they belong to a department, try automatic assignment
-    let managerAssignmentResult = null
-    if (role === 'MANAGER' && departmentId) {
-      try {
-        managerAssignmentResult = await autoAssignManagerToDepartment(departmentId)
-      } catch (error) {
-        console.error('Error in automatic manager assignment after user creation:', error)
-        // Continue without failing the user creation
-      }
+    // Trigger manager assignment hooks after user creation
+    try {
+      await userHooks.afterCreate(user.id)
+    } catch (error) {
+      console.error('Error in manager assignment hooks after user creation:', error)
+      // Continue without failing the user creation
     }
 
-    // Check for multiple managers across all departments and create notifications
-    if (role === 'MANAGER') {
+    // Send notification to manager if employee is assigned to a department with a manager
+    if (role === 'EMPLOYEE' && departmentId) {
       try {
-        await checkAndNotifyMultipleManagers()
+        const department = await db.department.findUnique({
+          where: { id: departmentId },
+          include: {
+            manager: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        })
+
+        if (department?.manager) {
+          await triggerEmployeeAssignmentNotification({
+            employeeId: user.id,
+            employeeName: user.name || user.email,
+            employeeEmail: user.email,
+            departmentId: department.id,
+            departmentName: department.name,
+            managerId: department.manager.id,
+            managerName: department.manager.name || department.manager.email,
+            assignmentDate: new Date(),
+          })
+        }
       } catch (error) {
-        console.error('Error checking for multiple managers after user creation:', error)
+        console.error('Error sending employee assignment notification:', error)
         // Continue without failing the user creation
       }
     }
 
     // Return created user without password
     const { password: _, ...userWithoutPassword } = user
-    return NextResponse.json({
-      ...userWithoutPassword,
-      managerAssignment: managerAssignmentResult
-    }, { status: 201 })
+    return NextResponse.json(userWithoutPassword, { status: 201 })
   } catch (error) {
     console.error('Error creating user:', error)
     return NextResponse.json(

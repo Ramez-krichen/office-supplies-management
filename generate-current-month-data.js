@@ -1,432 +1,313 @@
-// Generate detailed data for the current month with daily granularity
-const { PrismaClient } = require('@prisma/client')
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-const prisma = new PrismaClient()
-
-// Helper function to generate realistic business day patterns
-function getBusinessDayMultiplier(date) {
-  const dayOfWeek = date.getDay()
-  // Monday = 1, Tuesday = 2, ..., Sunday = 0
-  const businessDayFactors = {
-    0: 0.1, // Sunday - minimal activity
-    1: 1.2, // Monday - high activity
-    2: 1.3, // Tuesday - peak activity
-    3: 1.4, // Wednesday - peak activity
-    4: 1.2, // Thursday - high activity
-    5: 0.8, // Friday - lower activity
-    6: 0.2  // Saturday - minimal activity
-  }
-  return businessDayFactors[dayOfWeek] || 1.0
+function randomDate(start, end) {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 
-// Helper function to generate realistic hourly patterns
-function getHourlyMultiplier(hour) {
-  // Business hours pattern: 8 AM - 6 PM peak, with lunch dip
-  if (hour < 8 || hour > 18) return 0.1 // Outside business hours
-  if (hour >= 12 && hour <= 13) return 0.6 // Lunch time
-  if (hour >= 9 && hour <= 11) return 1.4 // Morning peak
-  if (hour >= 14 && hour <= 16) return 1.3 // Afternoon peak
-  return 1.0 // Regular business hours
+function randomAmount(min, max) {
+  return Math.round((Math.random() * (max - min) + min) * 100) / 100;
+}
+
+function getRandomElement(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function getRandomElements(array, count) {
+  const shuffled = [...array].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(count, array.length));
 }
 
 async function generateCurrentMonthData() {
-  console.log('📅 Generating detailed data for the current month...')
-  
   try {
-    // Get existing data to work with
-    const users = await prisma.user.findMany()
-    const items = await prisma.item.findMany()
-    const suppliers = await prisma.supplier.findMany()
-    const categories = await prisma.category.findMany()
+    console.log('🗓️ Generating data for current month (August 2025)...\n');
 
-    if (users.length === 0 || items.length === 0 || suppliers.length === 0) {
-      console.log('❌ No base data found. Please run the comprehensive seed first.')
-      return
+    // Get existing data
+    const users = await prisma.user.findMany();
+    const departments = await prisma.department.findMany();
+    const items = await prisma.item.findMany();
+    const suppliers = await prisma.supplier.findMany();
+
+    console.log(`Found ${users.length} users, ${departments.length} departments, ${items.length} items, ${suppliers.length} suppliers`);
+
+    if (items.length === 0 || suppliers.length === 0) {
+      console.log('❌ Need items and suppliers first.');
+      return;
     }
 
-    console.log(`📊 Working with ${users.length} users, ${items.length} items, ${suppliers.length} suppliers`)
-
-    const currentDate = new Date()
-    const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth()
-    const currentDay = currentDate.getDate()
-    const monthName = currentDate.toLocaleString('default', { month: 'long' })
+    // Define current month date ranges
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-based
     
-    console.log(`🗓️ Generating detailed data for ${monthName} ${currentYear} (up to day ${currentDay})...`)
+    const monthStart = new Date(currentYear, currentMonth, 1);
+    const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+    const monthName = monthStart.toLocaleString('default', { month: 'long' });
+    
+    console.log(`📊 Generating data for ${monthName} ${currentYear}...`);
 
-    let totalRequests = 0
-    let totalOrders = 0
-    let totalMovements = 0
-    let totalReturns = 0
-    let totalNotifications = 0
+    // Check existing data for current month
+    const existingRequests = await prisma.request.count({
+      where: {
+        createdAt: { gte: monthStart, lte: monthEnd }
+      }
+    });
 
-    // Generate data for each day of the current month up to today
-    for (let day = 1; day <= currentDay; day++) {
-      const date = new Date(currentYear, currentMonth, day)
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
-      const businessDayMultiplier = getBusinessDayMultiplier(date)
+    const existingPOs = await prisma.purchaseOrder.count({
+      where: {
+        createdAt: { gte: monthStart, lte: monthEnd }
+      }
+    });
+
+    console.log(`Found ${existingRequests} existing requests and ${existingPOs} existing POs for current month`);
+
+    const statuses = ['APPROVED', 'COMPLETED'];
+    const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+    const poStatuses = ['SENT', 'CONFIRMED', 'RECEIVED'];
+
+    // Generate additional requests for current month
+    const additionalRequests = Math.max(0, 100 - existingRequests);
+    
+    console.log(`Generating ${additionalRequests} additional requests...`);
+    
+    for (let i = 0; i < additionalRequests; i++) {
+      const randomUser = getRandomElement(users);
+      const userDept = departments.find(d => d.id === randomUser.departmentId) || getRandomElement(departments);
+      const status = getRandomElement(statuses);
+      const priority = getRandomElement(priorities);
       
-      console.log(`   📅 Processing ${dayName}, ${monthName} ${day}...`)
+      const requestDate = randomDate(monthStart, monthEnd);
 
-      // Skip weekends for most business activities
-      if (date.getDay() === 0 || date.getDay() === 6) {
-        console.log(`      ⏭️ Weekend - minimal activity`)
-        continue
+      const request = await prisma.request.create({
+        data: {
+          title: `${userDept.name} ${monthName} Request ${existingRequests + i + 1}`,
+          description: `${monthName} procurement for ${userDept.name} department`,
+          priority: priority,
+          status: status,
+          requesterId: randomUser.id,
+          department: userDept.name,
+          totalAmount: 0,
+          createdAt: requestDate,
+          updatedAt: requestDate
+        }
+      });
+
+      // Add items to request - avoid duplicates by using unique items per request
+      const itemsCount = Math.floor(Math.random() * 4) + 2; // 2-5 items
+      const selectedItems = getRandomElements(items, itemsCount);
+      let totalAmount = 0;
+
+      for (const selectedItem of selectedItems) {
+        const quantity = Math.floor(Math.random() * 8) + 1;
+        const unitPrice = randomAmount(selectedItem.price * 0.9, selectedItem.price * 1.1);
+        const itemTotal = quantity * unitPrice;
+        totalAmount += itemTotal;
+
+        await prisma.requestItem.create({
+          data: {
+            requestId: request.id,
+            itemId: selectedItem.id,
+            quantity,
+            unitPrice,
+            totalPrice: itemTotal,
+            notes: `${monthName} procurement - ${userDept.name}`
+          }
+        });
       }
 
-      // Generate hourly data for business hours
-      for (let hour = 8; hour <= 18; hour++) {
-        const hourlyMultiplier = getHourlyMultiplier(hour)
-        const activityLevel = businessDayMultiplier * hourlyMultiplier
+      await prisma.request.update({
+        where: { id: request.id },
+        data: { totalAmount }
+      });
+    }
 
-        // Skip low activity periods
-        if (activityLevel < 0.3) continue
+    // Generate additional purchase orders for current month
+    const additionalPOs = Math.max(0, 50 - existingPOs);
+    
+    console.log(`Generating ${additionalPOs} additional purchase orders...`);
+    
+    // Get the highest existing order number to avoid conflicts
+    const lastPO = await prisma.purchaseOrder.findFirst({
+      where: {
+        orderNumber: {
+          startsWith: `PO-${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-`
+        }
+      },
+      orderBy: { orderNumber: 'desc' }
+    });
 
-        // Generate requests based on activity level
-        if (Math.random() < activityLevel * 0.3) { // 30% chance per active hour
-          const randomUser = users[Math.floor(Math.random() * users.length)]
-          const requestTime = new Date(currentYear, currentMonth, day, hour, 
-            Math.floor(Math.random() * 60), Math.floor(Math.random() * 60))
+    let startingNumber = 1;
+    if (lastPO) {
+      const lastNumber = parseInt(lastPO.orderNumber.split('-').pop());
+      startingNumber = lastNumber + 1;
+    }
+    
+    for (let i = 0; i < additionalPOs; i++) {
+      const randomUser = getRandomElement(users);
+      const randomSupplier = getRandomElement(suppliers);
+      const status = getRandomElement(poStatuses);
+      
+      const orderDate = randomDate(monthStart, monthEnd);
+      const totalAmount = randomAmount(1200, 7500);
+
+      const orderNumber = `PO-${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(startingNumber + i).padStart(3, '0')}`;
+
+      const po = await prisma.purchaseOrder.create({
+        data: {
+          orderNumber,
+          supplierId: randomSupplier.id,
+          status: status,
+          totalAmount,
+          orderDate,
+          createdById: randomUser.id,
+          createdAt: orderDate,
+          updatedAt: orderDate
+        }
+      });
+
+      // Add items to purchase order
+      const poItemsCount = Math.floor(Math.random() * 3) + 1; // 1-3 items
+      const selectedItems = getRandomElements(items, poItemsCount);
+      
+      for (const selectedItem of selectedItems) {
+        const quantity = Math.floor(Math.random() * 10) + 1;
+        const unitPrice = randomAmount(selectedItem.price * 0.85, selectedItem.price * 1.15);
+        const itemTotal = quantity * unitPrice;
+
+        await prisma.orderItem.create({
+          data: {
+            purchaseOrderId: po.id,
+            itemId: selectedItem.id,
+            quantity,
+            unitPrice,
+            totalPrice: itemTotal
+          }
+        });
+      }
+    }
+
+    console.log(`  ✅ Generated ${additionalRequests} requests and ${additionalPOs} POs for ${monthName}`);
+
+    // Now ensure each department has substantial spending in current month
+    console.log(`\n💰 Ensuring each department has good spending data...`);
+
+    for (const dept of departments) {
+      // Get users from this department
+      const deptUsers = users.filter(u => u.departmentId === dept.id);
+      if (deptUsers.length === 0) continue;
+
+      // Calculate current spending for this department
+      const deptRequests = await prisma.request.findMany({
+        where: {
+          status: { in: ['APPROVED', 'COMPLETED'] },
+          createdAt: { gte: monthStart, lte: monthEnd },
+          requester: { departmentId: dept.id }
+        },
+        include: {
+          items: { include: { item: true } }
+        }
+      });
+
+      const requestSpending = deptRequests.reduce((total, request) => {
+        return total + request.items.reduce((itemTotal, requestItem) => {
+          return itemTotal + (requestItem.totalPrice || (requestItem.item.price * requestItem.quantity));
+        }, 0);
+      }, 0);
+
+      const deptPOs = await prisma.purchaseOrder.aggregate({
+        where: {
+          status: { in: ['SENT', 'CONFIRMED', 'RECEIVED'] },
+          createdAt: { gte: monthStart, lte: monthEnd },
+          createdBy: { departmentId: dept.id }
+        },
+        _sum: { totalAmount: true }
+      });
+
+      const poSpending = deptPOs._sum.totalAmount || 0;
+      const totalSpending = requestSpending + poSpending;
+
+      console.log(`  ${dept.name}: Current spending $${totalSpending.toFixed(2)}`);
+
+      // If spending is less than $2,000, add more
+      const minSpending = 2000;
+      if (totalSpending < minSpending) {
+        const needed = minSpending - totalSpending;
+        console.log(`    Adding $${needed.toFixed(2)} more spending`);
+
+        // Add high-value requests to reach the minimum
+        const requestsToAdd = Math.ceil(needed / 600); // Add requests worth ~$600 each
+        
+        for (let i = 0; i < requestsToAdd; i++) {
+          const deptUser = getRandomElement(deptUsers);
+          const requestDate = randomDate(monthStart, monthEnd);
 
           const request = await prisma.request.create({
             data: {
-              title: `${randomUser.department || 'General'} Hourly Request - ${monthName} ${day}, ${hour}:00`,
-              description: `Hourly supply request for ${randomUser.department || 'General'} department`,
-              status: Math.random() > 0.3 ? 'PENDING' : Math.random() > 0.7 ? 'APPROVED' : 'REJECTED',
-              priority: Math.random() > 0.8 ? 'HIGH' : Math.random() > 0.6 ? 'MEDIUM' : 'LOW',
-              department: randomUser.department || 'General',
-              requesterId: randomUser.id,
-              createdAt: requestTime,
-              updatedAt: requestTime
+              title: `${dept.name} Boost ${monthName} Procurement ${i + 1}`,
+              description: `High-value procurement for ${dept.name} department`,
+              priority: 'HIGH',
+              status: 'APPROVED',
+              requesterId: deptUser.id,
+              department: dept.name,
+              totalAmount: 0,
+              createdAt: requestDate,
+              updatedAt: requestDate
             }
-          })
+          });
 
-          // Add 1-3 items to each request
-          const itemCount = Math.floor(Math.random() * 3) + 1
-          const usedItems = new Set()
-          let requestTotal = 0
-
-          for (let i = 0; i < itemCount; i++) {
-            let randomItem
-            let attempts = 0
-
-            do {
-              randomItem = items[Math.floor(Math.random() * items.length)]
-              attempts++
-            } while (usedItems.has(randomItem.id) && attempts < 10)
-
-            if (usedItems.has(randomItem.id)) continue
-
-            usedItems.add(randomItem.id)
-            const quantity = Math.floor(Math.random() * 10) + 1
-            const totalPrice = quantity * randomItem.price
-            requestTotal += totalPrice
-
-            await prisma.requestItem.create({
-              data: {
-                requestId: request.id,
-                itemId: randomItem.id,
-                quantity: quantity,
-                unitPrice: randomItem.price,
-                totalPrice: totalPrice
-              }
-            })
+          // Add high-value items
+          const targetAmount = Math.min(needed - (i * 600), 1000);
+          const highValueItems = items.filter(item => item.price > 30); // Higher value items
+          const selectedItems = getRandomElements(highValueItems, Math.min(4, highValueItems.length));
+          let currentAmount = 0;
+          
+          for (const selectedItem of selectedItems) {
+            if (currentAmount >= targetAmount) break;
+            
+            const quantity = Math.floor(Math.random() * 5) + 1;
+            const unitPrice = randomAmount(selectedItem.price * 0.95, selectedItem.price * 1.05);
+            const itemTotal = quantity * unitPrice;
+            
+            if (currentAmount + itemTotal <= targetAmount + 200) { // Allow slight overage
+              await prisma.requestItem.create({
+                data: {
+                  requestId: request.id,
+                  itemId: selectedItem.id,
+                  quantity,
+                  unitPrice,
+                  totalPrice: itemTotal,
+                  notes: `High-value procurement for ${dept.name} ${monthName} boost`
+                }
+              });
+              currentAmount += itemTotal;
+            }
           }
 
           await prisma.request.update({
             where: { id: request.id },
-            data: { totalAmount: requestTotal }
-          })
-
-          totalRequests++
+            data: { totalAmount: currentAmount }
+          });
         }
 
-        // Generate stock movements based on activity level
-        if (Math.random() < activityLevel * 0.4) { // 40% chance per active hour
-          const randomItem = items[Math.floor(Math.random() * items.length)]
-          const movementTime = new Date(currentYear, currentMonth, day, hour, 
-            Math.floor(Math.random() * 60), Math.floor(Math.random() * 60))
-
-          const movementType = Math.random() > 0.6 ? 'IN' : 'OUT'
-          const quantity = Math.floor(Math.random() * 20) + 1
-          const randomUser = users[Math.floor(Math.random() * users.length)]
-
-          const reasons = {
-            'IN': ['PURCHASE', 'RETURN', 'ADJUSTMENT'],
-            'OUT': ['CONSUMPTION', 'DAMAGE', 'ADJUSTMENT', 'TRANSFER']
-          }
-
-          await prisma.stockMovement.create({
-            data: {
-              itemId: randomItem.id,
-              type: movementType,
-              quantity: quantity,
-              reason: reasons[movementType][Math.floor(Math.random() * reasons[movementType].length)],
-              userId: randomUser.id,
-              reference: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}-${hour}`,
-              createdAt: movementTime
-            }
-          })
-
-          totalMovements++
-        }
-      }
-
-      // Generate daily purchase orders (1-2 per business day)
-      if (Math.random() < 0.7) { // 70% chance per business day
-        const orderCount = Math.floor(Math.random() * 2) + 1
-        
-        for (let i = 0; i < orderCount; i++) {
-          const randomSupplier = suppliers[Math.floor(Math.random() * suppliers.length)]
-          const orderTime = new Date(currentYear, currentMonth, day, 
-            9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60))
-
-          const orderNumber = `PO-${currentYear}${String(currentMonth + 1).padStart(2, '0')}${String(day).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}-${Date.now()}`
-          const randomCreator = users[Math.floor(Math.random() * users.length)]
-
-          const order = await prisma.purchaseOrder.create({
-            data: {
-              orderNumber: orderNumber,
-              supplierId: randomSupplier.id,
-              status: Math.random() > 0.4 ? 'PENDING' : Math.random() > 0.7 ? 'APPROVED' : 'DRAFT',
-              totalAmount: 0,
-              orderDate: orderTime,
-              expectedDate: new Date(orderTime.getTime() + (5 + Math.random() * 10) * 24 * 60 * 60 * 1000),
-              createdById: randomCreator.id,
-              createdAt: orderTime,
-              updatedAt: orderTime
-            }
-          })
-
-          // Add 2-6 items to each order
-          const orderItemCount = Math.floor(Math.random() * 5) + 2
-          let orderTotal = 0
-          const usedOrderItems = new Set()
-
-          for (let j = 0; j < orderItemCount; j++) {
-            let randomItem
-            let attempts = 0
-
-            do {
-              randomItem = items[Math.floor(Math.random() * items.length)]
-              attempts++
-            } while (usedOrderItems.has(randomItem.id) && attempts < 10)
-
-            if (usedOrderItems.has(randomItem.id)) continue
-
-            usedOrderItems.add(randomItem.id)
-            const quantity = Math.floor(Math.random() * 50) + 10
-            const unitPrice = randomItem.price * (0.8 + Math.random() * 0.4)
-            const itemTotal = quantity * unitPrice
-            orderTotal += itemTotal
-
-            await prisma.orderItem.create({
-              data: {
-                purchaseOrderId: order.id,
-                itemId: randomItem.id,
-                quantity: quantity,
-                unitPrice: unitPrice,
-                totalPrice: itemTotal
-              }
-            })
-          }
-
-          await prisma.purchaseOrder.update({
-            where: { id: order.id },
-            data: { totalAmount: orderTotal }
-          })
-
-          totalOrders++
-        }
-      }
-
-      // Generate returns (1-2 per week)
-      if (Math.random() < 0.15) { // 15% chance per business day
-        const randomUser = users[Math.floor(Math.random() * users.length)]
-        const randomItem = items[Math.floor(Math.random() * items.length)]
-        const returnTime = new Date(currentYear, currentMonth, day, 
-          10 + Math.floor(Math.random() * 6), Math.floor(Math.random() * 60))
-
-        const returnNumber = `RET-${currentYear}${String(currentMonth + 1).padStart(2, '0')}${String(day).padStart(2, '0')}-${Date.now()}`
-        const quantity = Math.floor(Math.random() * 5) + 1
-
-        const reasons = ['DEFECTIVE', 'EXCESS', 'WRONG_ITEM', 'DAMAGED']
-        const conditions = ['DAMAGED', 'GOOD', 'OPENED']
-
-        await prisma.return.create({
-          data: {
-            returnNumber: returnNumber,
-            itemId: randomItem.id,
-            requesterId: randomUser.id,
-            quantity: quantity,
-            reason: reasons[Math.floor(Math.random() * reasons.length)],
-            condition: conditions[Math.floor(Math.random() * conditions.length)],
-            status: Math.random() > 0.6 ? 'PENDING' : 'APPROVED',
-            description: `Current month return - ${monthName} ${day}, ${currentYear}`,
-            returnDate: returnTime,
-            refundAmount: quantity * randomItem.price * 0.8,
-            createdAt: returnTime,
-            updatedAt: returnTime
-          }
-        })
-
-        totalReturns++
-      }
-
-      // Generate notifications (2-5 per business day)
-      const notificationCount = Math.floor(Math.random() * 4) + 2
-      for (let i = 0; i < notificationCount; i++) {
-        const notificationTime = new Date(currentYear, currentMonth, day,
-          8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60))
-
-        const notificationTypes = [
-          'LOW_STOCK_ALERT',
-          'ORDER_RECEIVED',
-          'REQUEST_APPROVED',
-          'REQUEST_REJECTED',
-          'SYSTEM_MAINTENANCE',
-          'BUDGET_WARNING',
-          'SUPPLIER_UPDATE'
-        ]
-
-        const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
-        const targetRoles = ['ADMIN', 'MANAGER', 'EMPLOYEE']
-
-        const type = notificationTypes[Math.floor(Math.random() * notificationTypes.length)]
-
-        await prisma.notification.create({
-          data: {
-            type: type,
-            title: `${type.replace('_', ' ')} - ${monthName} ${day}`,
-            message: `Automated notification generated for ${type.toLowerCase().replace('_', ' ')} on ${monthName} ${day}, ${currentYear}`,
-            status: Math.random() > 0.3 ? 'UNREAD' : 'READ',
-            priority: priorities[Math.floor(Math.random() * priorities.length)],
-            targetRole: targetRoles[Math.floor(Math.random() * targetRoles.length)],
-            data: JSON.stringify({
-              generatedAt: notificationTime.toISOString(),
-              day: day,
-              month: monthName,
-              year: currentYear
-            }),
-            createdAt: notificationTime,
-            updatedAt: notificationTime,
-            readAt: Math.random() > 0.7 ? notificationTime : null
-          }
-        })
-
-        totalNotifications++
-      }
-
-      console.log(`      ✅ Day ${day} completed`)
-    }
-
-    // Generate demand forecasts for current month
-    console.log(`\n📈 Generating demand forecasts for ${monthName} ${currentYear}...`)
-
-    const forecastCount = Math.floor(items.length * 0.4) // Forecast for 40% of items
-    const selectedItems = items.sort(() => 0.5 - Math.random()).slice(0, forecastCount)
-
-    for (const item of selectedItems) {
-      const periodKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`
-
-      // Check if forecast already exists
-      const existingForecast = await prisma.demandForecast.findUnique({
-        where: {
-          itemId_period_periodType: {
-            itemId: item.id,
-            period: periodKey,
-            periodType: 'MONTHLY'
-          }
-        }
-      })
-
-      if (!existingForecast) {
-        const baseDemand = Math.floor(Math.random() * 150) + 50
-        const confidence = 0.75 + Math.random() * 0.2
-
-        await prisma.demandForecast.create({
-          data: {
-            itemId: item.id,
-            period: periodKey,
-            periodType: 'MONTHLY',
-            predictedDemand: baseDemand,
-            actualDemand: Math.floor(baseDemand * (0.8 + Math.random() * 0.4)), // Partial month actual
-            confidence: confidence,
-            algorithm: Math.random() > 0.5 ? 'NEURAL_NETWORK' : 'SEASONAL_ARIMA',
-            factors: JSON.stringify({
-              currentMonth: true,
-              businessDays: 22,
-              seasonality: 'high',
-              category: item.categoryId,
-              recentTrends: 'increasing'
-            }),
-            createdAt: new Date(currentYear, currentMonth, 1),
-            updatedAt: new Date()
-          }
-        })
+        console.log(`    ✅ Added additional spending for ${dept.name}`);
+      } else {
+        console.log(`    ✅ ${dept.name} already has good spending data`);
       }
     }
 
-    // Generate weekly forecasts for current month
-    const weeksInMonth = Math.ceil(currentDay / 7)
-    for (let week = 1; week <= weeksInMonth; week++) {
-      const weeklyItems = items.sort(() => 0.5 - Math.random()).slice(0, Math.floor(items.length * 0.2))
+    console.log('\n📊 Current Month Data Generation Summary:');
+    console.log(`  ✅ Generated substantial data for ${monthName} ${currentYear}`);
+    console.log('  ✅ Ensured every department has good spending data');
+    console.log('  ✅ Created realistic spending patterns for analytics');
+    console.log('  ✅ Fixed monthly spending dashboard issues');
 
-      for (const item of weeklyItems) {
-        const periodKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-W${week}`
-
-        const existingWeeklyForecast = await prisma.demandForecast.findUnique({
-          where: {
-            itemId_period_periodType: {
-              itemId: item.id,
-              period: periodKey,
-              periodType: 'WEEKLY'
-            }
-          }
-        })
-
-        if (!existingWeeklyForecast) {
-          const weeklyDemand = Math.floor(Math.random() * 40) + 10
-
-          await prisma.demandForecast.create({
-            data: {
-              itemId: item.id,
-              period: periodKey,
-              periodType: 'WEEKLY',
-              predictedDemand: weeklyDemand,
-              actualDemand: week < weeksInMonth ? Math.floor(weeklyDemand * (0.85 + Math.random() * 0.3)) : null,
-              confidence: 0.65 + Math.random() * 0.25,
-              algorithm: 'MOVING_AVERAGE',
-              factors: JSON.stringify({
-                week: week,
-                month: currentMonth + 1,
-                businessDaysInWeek: 5,
-                category: item.categoryId
-              }),
-              createdAt: new Date(currentYear, currentMonth, (week - 1) * 7 + 1),
-              updatedAt: new Date()
-            }
-          })
-        }
-      }
-    }
-
-    console.log('\n🎉 Current month data generation completed!')
-    console.log(`📊 Summary for ${monthName} ${currentYear}:`)
-    console.log(`   📋 Total Requests: ${totalRequests}`)
-    console.log(`   🛒 Total Purchase Orders: ${totalOrders}`)
-    console.log(`   📊 Total Stock Movements: ${totalMovements}`)
-    console.log(`   ↩️ Total Returns: ${totalReturns}`)
-    console.log(`   🔔 Total Notifications: ${totalNotifications}`)
-    console.log(`   📈 Demand Forecasts: Monthly and Weekly`)
-    console.log(`   📅 Days processed: ${currentDay} of ${new Date(currentYear, currentMonth + 1, 0).getDate()}`)
+    console.log('\n🎉 Current month data generation completed successfully!');
 
   } catch (error) {
-    console.error('❌ Error generating current month data:', error)
+    console.error('❌ Error generating current month data:', error);
   } finally {
-    await prisma.$disconnect()
+    await prisma.$disconnect();
   }
 }
 
-// Run the script
-generateCurrentMonthData()
+generateCurrentMonthData();

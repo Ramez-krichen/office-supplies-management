@@ -87,6 +87,7 @@ function DepartmentDashboardContent() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('')
   const [availableDepartments, setAvailableDepartments] = useState<Array<{id: string, name: string, code: string}>>([])
   const [loadingDepartments, setLoadingDepartments] = useState(true)
+  const [needsDepartmentSelection, setNeedsDepartmentSelection] = useState(false)
 
   // Fetch available departments
   const fetchDepartments = async () => {
@@ -96,11 +97,45 @@ function DepartmentDashboardContent() {
       if (response.ok) {
         const data = await response.json()
         setAvailableDepartments(data.departments || [])
+        
+        // If user is admin and no department is selected, and there are departments available
+        // Auto-select the first department
+        if (session?.user?.role === 'ADMIN' && !selectedDepartment && data.departments?.length > 0) {
+          const departmentParam = searchParams.get('department')
+          if (!departmentParam) {
+            setSelectedDepartment(data.departments[0].name)
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching departments:', error)
     } finally {
       setLoadingDepartments(false)
+    }
+  }
+
+  const fetchDashboardData = async () => {
+    if (!selectedDepartment) {
+      setLoading(false)
+      setNeedsDepartmentSelection(true)
+      return
+    }
+
+    try {
+      setLoading(true)
+      setNeedsDepartmentSelection(false)
+      const url = `/api/dashboard/department?department=${encodeURIComponent(selectedDepartment)}`
+      
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error('Failed to fetch department dashboard data')
+      }
+      const data = await response.json()
+      setDashboardData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -125,40 +160,21 @@ function DepartmentDashboardContent() {
     } else if (session?.user?.department) {
       setSelectedDepartment(session.user.department)
     }
+    // For admins without a department, we'll handle this after fetching available departments
   }, [session, status, router, searchParams])
 
   useEffect(() => {
-    if (selectedDepartment) {
-      fetchDashboardData()
-    }
+    fetchDashboardData()
   }, [selectedDepartment])
 
   // Fetch departments on component mount
   useEffect(() => {
-    fetchDepartments()
-  }, [])
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true)
-      const url = selectedDepartment 
-        ? `/api/dashboard/department?department=${encodeURIComponent(selectedDepartment)}`
-        : '/api/dashboard/department'
-      
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error('Failed to fetch department dashboard data')
-      }
-      const data = await response.json()
-      setDashboardData(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(false)
+    if (session) {
+      fetchDepartments()
     }
-  }
+  }, [session])
 
-  if (loading) {
+  if (loading && !needsDepartmentSelection) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -168,11 +184,49 @@ function DepartmentDashboardContent() {
     )
   }
 
+  if (needsDepartmentSelection && session?.user?.role === 'ADMIN') {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="text-lg text-gray-600">Please select a department to view its dashboard</div>
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="border border-gray-300 rounded-md px-4 py-2 text-sm min-w-64"
+            disabled={loadingDepartments}
+          >
+            <option value="">Select Department</option>
+            {availableDepartments.map((dept) => (
+              <option key={dept.id} value={dept.name}>
+                {dept.name} ({dept.code})
+              </option>
+            ))}
+          </select>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   if (error || !dashboardData) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="text-lg text-red-600">Error: {error || 'Failed to load data'}</div>
+          {session?.user?.role === 'ADMIN' && (
+            <select
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="border border-gray-300 rounded-md px-4 py-2 text-sm min-w-64"
+              disabled={loadingDepartments}
+            >
+              <option value="">Select Department</option>
+              {availableDepartments.map((dept) => (
+                <option key={dept.id} value={dept.name}>
+                  {dept.name} ({dept.code})
+                </option>
+                ))}
+            </select>
+          )}
         </div>
       </DashboardLayout>
     )

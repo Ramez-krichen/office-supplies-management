@@ -5,8 +5,10 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 const prismaClientSingleton = () => {
-  // Use fallback database URL for development if not set
-  const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
+  // Use fallback database URL that matches the expected location
+  const databaseUrl = process.env.DATABASE_URL || 'file:./prisma/comprehensive.db'
+  
+  console.log('Database URL:', databaseUrl)
   
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
@@ -34,7 +36,7 @@ process.on('beforeExit', async () => {
   }
 })
 
-// Handle potential connection errors
+// Handle potential connection errors with better error handling
 db.$connect()
   .then(() => {
     console.log('✅ Database connection established successfully')
