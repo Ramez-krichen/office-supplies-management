@@ -36,9 +36,10 @@ interface SupplierModalProps {
   mode: 'add' | 'edit' | 'view'
   title: string
   categories?: Array<{ id: string; name: string }>
+  onCategoryDetection?: (supplierId: string, detectedCategories: string[]) => void
 }
 
-export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, title, categories = [] }: SupplierModalProps) {
+export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, title, categories = [], onCategoryDetection }: SupplierModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     contactPerson: '',
@@ -183,6 +184,11 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
             ...prev,
             categories: result.categories
           }))
+          
+          // Call the callback to update the parent component immediately
+          if (onCategoryDetection && initialData?.id) {
+            onCategoryDetection(initialData.id, result.categories)
+          }
         }
       } else {
         setCategoryDetectionResult({

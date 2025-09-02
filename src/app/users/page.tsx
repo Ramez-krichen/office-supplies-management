@@ -15,7 +15,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE'
+  role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'GENERAL_MANAGER'
   department: string
   status: 'ACTIVE' | 'INACTIVE'
   lastSignIn?: string
@@ -32,6 +32,7 @@ const getRoleIcon = (role: string) => {
     case 'ADMIN': return <Crown className="h-5 w-5 text-yellow-600" />
     case 'MANAGER': return <Shield className="h-5 w-5 text-blue-600" />
     case 'EMPLOYEE': return <User className="h-5 w-5 text-gray-600" />
+    case 'GENERAL_MANAGER': return <Crown className="h-5 w-5 text-purple-600" />
     default: return <User className="h-5 w-5 text-gray-600" />
   }
 }
@@ -41,6 +42,7 @@ const getRoleColor = (role: string) => {
     case 'ADMIN': return 'bg-yellow-100 text-yellow-800 border border-yellow-300'
     case 'MANAGER': return 'bg-blue-100 text-blue-800 border border-blue-300'
     case 'EMPLOYEE': return 'bg-gray-100 text-gray-800 border border-gray-300'
+    case 'GENERAL_MANAGER': return 'bg-purple-100 text-purple-800 border border-purple-300'
     default: return 'bg-gray-100 text-gray-800 border border-gray-300'
   }
 }
@@ -239,11 +241,11 @@ export default function UsersPage() {
     const matchesDepartment = departmentFilter === 'ALL' || user.department === departmentFilter
     return matchesSearch && matchesRole && matchesStatus && matchesDepartment
   }).sort((a, b) => {
-    // Sort by role priority: ADMIN first, then MANAGER, then EMPLOYEE
+    // Sort by role priority: ADMIN first, then GENERAL_MANAGER, then MANAGER, then EMPLOYEE
     // Within each role, active users appear before inactive users
-    const roleOrder = { 'ADMIN': 0, 'MANAGER': 1, 'EMPLOYEE': 2 }
-    const aRoleOrder = roleOrder[a.role as keyof typeof roleOrder] ?? 3
-    const bRoleOrder = roleOrder[b.role as keyof typeof roleOrder] ?? 3
+    const roleOrder = { 'ADMIN': 0, 'GENERAL_MANAGER': 1, 'MANAGER': 2, 'EMPLOYEE': 3 }
+    const aRoleOrder = roleOrder[a.role as keyof typeof roleOrder] ?? 4
+    const bRoleOrder = roleOrder[b.role as keyof typeof roleOrder] ?? 4
 
     // First, sort by role
     if (aRoleOrder !== bRoleOrder) {
@@ -365,6 +367,7 @@ export default function UsersPage() {
                 >
                   <option value="ALL">All Roles</option>
                   <option value="ADMIN">Admin</option>
+                  <option value="GENERAL_MANAGER">General Manager</option>
                   <option value="MANAGER">Manager</option>
                   <option value="EMPLOYEE">Employee</option>
                 </select>
@@ -449,6 +452,7 @@ export default function UsersPage() {
                           {getRoleIcon(user.role)}
                           <span className="text-xs font-semibold">
                             {user.role === 'ADMIN' ? 'Administrator' : 
+                             user.role === 'GENERAL_MANAGER' ? 'General Manager' :
                              user.role === 'MANAGER' ? 'Manager' : 'Employee'}
                           </span>
                         </div>

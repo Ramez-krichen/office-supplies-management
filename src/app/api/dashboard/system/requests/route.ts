@@ -23,13 +23,14 @@ export async function GET() {
           description: true,
           status: true,
           priority: true,
+          totalAmount: true,
           createdAt: true,
           updatedAt: true,
-          user: {
+          requester: {
             select: {
               name: true,
               email: true,
-              department: {
+              departmentRef: {
                 select: {
                   name: true
                 }
@@ -68,10 +69,10 @@ export async function GET() {
           status: true,
           priority: true,
           createdAt: true,
-          user: {
+          requester: {
             select: {
               name: true,
-              department: {
+              departmentRef: {
                 select: {
                   name: true
                 }
@@ -95,9 +96,7 @@ export async function GET() {
 
     // Calculate total value of requests
     const totalValue = allRequests.reduce((total, request) => {
-      return total + request.items.reduce((itemTotal, item) => {
-        return itemTotal + (item.totalPrice || (item.item.price * item.quantity))
-      }, 0)
+      return total + (request.totalAmount || 0)
     }, 0)
 
     // Group by priority
@@ -110,7 +109,7 @@ export async function GET() {
 
     // Group by department
     const departmentGroups = allRequests.reduce((acc: any, request) => {
-      const dept = request.user.department?.name || 'No Department'
+      const dept = request.requester.departmentRef?.name || 'No Department'
       if (!acc[dept]) acc[dept] = []
       acc[dept].push(request)
       return acc

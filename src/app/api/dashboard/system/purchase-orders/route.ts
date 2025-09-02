@@ -22,7 +22,7 @@ export async function GET() {
           status: true,
           totalAmount: true,
           orderDate: true,
-          expectedDelivery: true,
+          expectedDate: true,
           createdAt: true,
           supplier: {
             select: {

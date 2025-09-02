@@ -57,6 +57,17 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Validate that the user exists in the database
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true }
+    })
+
+    if (!userExists) {
+      console.error('User not found in database:', session.user.id)
+      return NextResponse.json({ error: 'User not found in database' }, { status: 401 })
+    }
+
     const body = await request.json()
     const {
       name,
@@ -107,23 +118,28 @@ export async function PUT(
         where: { id: supplierId },
         data: {
           name,
-          email: email || null,
-          phone: phone || null,
-          address: address || null,
-          contactPerson: contactPerson || null
+          email: email && email.trim() ? email.trim() : null,
+          phone: phone && phone.trim() ? phone.trim() : null,
+          address: address && address.trim() ? address.trim() : null,
+          contactPerson: contactPerson && contactPerson.trim() ? contactPerson.trim() : null
         }
       })
 
-      // Create audit log
-      await prisma.auditLog.create({
-        data: {
-          action: 'UPDATE',
-          entity: 'Supplier',
-          entityId: updatedSupplier.id,
-          performedBy: session.user.id,
-          details: `Updated supplier: ${updatedSupplier.name}`
-        }
-      })
+      // Create audit log with proper error handling
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: 'UPDATE',
+            entity: 'Supplier',
+            entityId: updatedSupplier.id,
+            performedBy: session.user.id,
+            details: `Updated supplier: ${updatedSupplier.name}`
+          }
+        })
+      } catch (auditError) {
+        console.error('Failed to create audit log:', auditError)
+        // Continue with the response even if audit log fails
+      }
 
       return NextResponse.json(updatedSupplier)
     } catch (updateError) {
@@ -156,6 +172,17 @@ export async function DELETE(
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Validate that the user exists in the database
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true }
+    })
+
+    if (!userExists) {
+      console.error('User not found in database:', session.user.id)
+      return NextResponse.json({ error: 'User not found in database' }, { status: 401 })
     }
     
     const { id: supplierId } = await params
@@ -193,16 +220,21 @@ export async function DELETE(
       where: { id: supplierId }
     })
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        action: 'DELETE',
-        entity: 'Supplier',
-        entityId: deletedSupplier.id,
-        performedBy: session.user.id,
-        details: `Deleted supplier: ${deletedSupplier.name}`
-      }
-    })
+    // Create audit log with proper error handling
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: 'DELETE',
+          entity: 'Supplier',
+          entityId: deletedSupplier.id,
+          performedBy: session.user.id,
+          details: `Deleted supplier: ${deletedSupplier.name}`
+        }
+      })
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError)
+      // Continue with the response even if audit log fails
+    }
 
     return NextResponse.json({ message: 'Supplier deleted successfully' })
   } catch (error) {

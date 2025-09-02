@@ -689,7 +689,8 @@ function RequestsPageContent() {
                         )}
 
                         {(session?.user?.role === 'ADMIN' || 
-                         session?.user?.id === request.requesterId) && (
+                         session?.user?.id === request.requesterId) && 
+                         request.status === 'PENDING' && (
                           <button
                             onClick={() => setRequestToDelete(request)}
                             className="text-red-600 hover:text-red-900"
@@ -780,7 +781,8 @@ function RequestsPageContent() {
                           )}
 
                           {(session?.user?.role === 'ADMIN' || 
-                           session?.user?.id === request.requesterId) && (
+                           session?.user?.id === request.requesterId) && 
+                           request.status === 'PENDING' && (
                             <button
                               onClick={() => setRequestToDelete(request)}
                               className="text-red-600 hover:text-red-900 p-1"

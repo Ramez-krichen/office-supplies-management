@@ -19,10 +19,10 @@ export async function GET(request: Request) {
     let targetDepartment: string | null = null
     if (userRole === 'ADMIN') {
       // Admins can view any department
-      targetDepartment = requestedDepartment || user.department
+      targetDepartment = requestedDepartment || user.department || null
     } else if (userRole === 'MANAGER') {
       // Managers can only view their own department
-      targetDepartment = user.department
+      targetDepartment = user.department || null
     }
 
     if (!targetDepartment) {
@@ -31,11 +31,10 @@ export async function GET(request: Request) {
 
     const now = new Date()
     const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const lastQuarter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
-    // First, find the department by name or code
+    // First, try to find the department by name or code
     const department = await prisma.department.findFirst({
       where: {
         OR: [
@@ -45,8 +44,25 @@ export async function GET(request: Request) {
       }
     })
 
-    if (!department) {
-      return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+    // If no formal department exists, we'll work with the department string directly
+    // This handles legacy data where users have department strings but no Department records
+    let departmentId: string | null = null
+    let departmentName: string = targetDepartment
+    
+    if (department) {
+      departmentId = department.id
+      departmentName = department.name
+    } else {
+      // Check if there are users with this department string
+      const usersWithDepartment = await prisma.user.count({
+        where: {
+          department: targetDepartment
+        }
+      })
+      
+      if (usersWithDepartment === 0) {
+        return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+      }
     }
 
     // Optimize database queries by running them in parallel
@@ -66,32 +82,42 @@ export async function GET(request: Request) {
       recentRequests,
       averageApprovalTime
     ] = await Promise.all([
-      // Basic request counts
+      // Basic request counts - use both department ID and department string
       prisma.request.count({
-        where: { requester: { departmentId: department.id } }
+        where: departmentId ? 
+          { requester: { departmentId } } : 
+          { requester: { department: targetDepartment } }
       }),
       prisma.request.count({
         where: {
           status: 'PENDING',
-          requester: { departmentId: department.id }
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } })
         }
       }),
       prisma.request.count({
         where: {
           status: 'APPROVED',
-          requester: { departmentId: department.id }
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } })
         }
       }),
       prisma.request.count({
         where: {
           status: 'REJECTED',
-          requester: { departmentId: department.id }
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } })
         }
       }),
 
-      // Department team information
+      // Department team information - use both department ID and department string
       prisma.user.findMany({
-        where: { departmentId: department.id },
+        where: departmentId ? 
+          { departmentId } : 
+          { department: targetDepartment },
         select: {
           id: true,
           name: true,
@@ -107,7 +133,9 @@ export async function GET(request: Request) {
       prisma.request.findMany({
         where: {
           status: { in: ['APPROVED', 'COMPLETED'] },
-          requester: { departmentId: department.id }
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } })
         },
         include: {
           items: {
@@ -120,7 +148,9 @@ export async function GET(request: Request) {
       prisma.purchaseOrder.aggregate({
         where: {
           status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
-          createdBy: { departmentId: department.id }
+          ...(departmentId ? 
+            { createdBy: { departmentId } } : 
+            { createdBy: { department: targetDepartment } })
         },
         _sum: { totalAmount: true }
       }),
@@ -130,7 +160,9 @@ export async function GET(request: Request) {
         where: {
           status: { in: ['APPROVED', 'COMPLETED'] },
           createdAt: { gte: currentMonth },
-          requester: { departmentId: department.id }
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } })
         },
         include: {
           items: {
@@ -144,7 +176,9 @@ export async function GET(request: Request) {
         where: {
           status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
           createdAt: { gte: currentMonth },
-          createdBy: { departmentId: department.id }
+          ...(departmentId ? 
+            { createdBy: { departmentId } } : 
+            { createdBy: { department: targetDepartment } })
         },
         _sum: { totalAmount: true }
       }),
@@ -154,7 +188,9 @@ export async function GET(request: Request) {
         where: {
           status: { in: ['APPROVED', 'COMPLETED'] },
           createdAt: { gte: lastQuarter },
-          requester: { departmentId: department.id }
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } })
         },
         include: {
           items: {
@@ -168,7 +204,9 @@ export async function GET(request: Request) {
         where: {
           status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
           createdAt: { gte: lastQuarter },
-          createdBy: { departmentId: department.id }
+          ...(departmentId ? 
+            { createdBy: { departmentId } } : 
+            { createdBy: { department: targetDepartment } })
         },
         _sum: { totalAmount: true }
       }),
@@ -177,7 +215,9 @@ export async function GET(request: Request) {
       prisma.request.groupBy({
         by: ['requesterId'],
         where: {
-          requester: { departmentId: department.id },
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } }),
           createdAt: { gte: lastQuarter }
         },
         _count: { id: true },
@@ -188,9 +228,9 @@ export async function GET(request: Request) {
 
       // Recent requests
       prisma.request.findMany({
-        where: {
-          requester: { departmentId: department.id }
-        },
+        where: departmentId ? 
+          { requester: { departmentId } } : 
+          { requester: { department: targetDepartment } },
         take: 10,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -218,7 +258,9 @@ export async function GET(request: Request) {
       prisma.request.findMany({
         where: {
           status: { in: ['APPROVED', 'REJECTED'] },
-          requester: { departmentId: department.id },
+          ...(departmentId ? 
+            { requester: { departmentId } } : 
+            { requester: { department: targetDepartment } }),
           createdAt: { gte: lastMonth }
         },
         select: {
@@ -329,7 +371,7 @@ export async function GET(request: Request) {
       departmentUsers,
       topRequesters: topRequesterDetails,
       departmentInfo: {
-        name: department.name,
+        name: departmentName,
         totalSpending,
         monthlySpending,
         quarterlySpending

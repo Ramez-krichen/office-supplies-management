@@ -133,17 +133,52 @@ export const authOptions: NextAuthOptions = {
       try {
         // Guard against undefined session/user to avoid runtime errors that cause HTML responses
         if (token && session && session.user) {
-          session.user = {
-            ...session.user,
-            id: (token.id as string) ?? session.user?.id,
-            role: (token.role as string) ?? (session.user as { role?: string })?.role,
-            department: (token.department as string | null | undefined) ?? session.user?.department,
-            lastSignIn: (token.lastSignIn as string | null | undefined) ?? session.user?.lastSignIn,
-          } as typeof session.user
+          // Validate that the user still exists in the database
+          if (token.id) {
+            try {
+              const userExists = await db.user.findUnique({
+                where: { id: token.id as string },
+                select: { id: true, status: true, role: true, department: true }
+              })
+              
+              if (!userExists || userExists.status !== 'ACTIVE') {
+                console.log('User no longer exists or is inactive, invalidating session:', token.id)
+                // Instead of returning null, clear the user data to trigger re-auth
+                session.user.id = ''
+                session.user.role = ''
+                return session
+              }
+              
+              // Update session with fresh data from database
+              session.user = {
+                ...session.user,
+                id: userExists.id,
+                role: userExists.role,
+                department: userExists.department,
+                lastSignIn: (token.lastSignIn as string | null | undefined) ?? session.user?.lastSignIn,
+              } as typeof session.user
+            } catch (dbError) {
+              console.error('Database error during session validation:', dbError)
+              // If we can't validate the user, clear the user ID to trigger re-auth
+              session.user.id = ''
+              session.user.role = ''
+              return session
+            }
+          } else {
+            // No user ID in token, clear session data
+            console.log('No user ID in token, clearing session data')
+            session.user.id = ''
+            session.user.role = ''
+          }
         }
         return session
       } catch (error) {
         console.error('Session callback error:', error)
+        // On critical errors, clear user data instead of returning null
+        if (session && session.user) {
+          session.user.id = ''
+          session.user.role = ''
+        }
         return session
       }
     },
@@ -164,7 +199,5 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
-  },
-  // Disable default redirects to prevent intermediate page flashes
-  redirectProxyUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  }
 }

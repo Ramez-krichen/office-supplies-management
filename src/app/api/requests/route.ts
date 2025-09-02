@@ -186,105 +186,113 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const accessCheck = await checkAccess(createFeatureAccessCheck('REQUESTS', 'create')())
-    if (!accessCheck.hasAccess) {
-      return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
-    }
+const accessCheck = await checkAccess(createFeatureAccessCheck('REQUESTS', 'create')())
+if (!accessCheck.hasAccess) {
+  return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
+}
 
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+const session = await getServerSession(authOptions)
+if (!session?.user?.id) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+}
 
-    const { user, userRole, userDepartment } = accessCheck
+const { user, userDepartment } = accessCheck
 
-    const body = await request.json()
-    console.log('Request body:', JSON.stringify(body, null, 2))
+const body = await request.json()
+console.log('Request body:', JSON.stringify(body, null, 2))
     
-    const {
-      title,
-      description,
-      department,
-      priority,
-      items
-    } = body
+const {
+  title,
+  description,
+  priority,
+  items
+} = body
 
-    // Validate required fields
-    if (!title || !department || !items || !items.length) {
-      console.log('Validation failed:', { title: !!title, department: !!department, items: items?.length })
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
+// Fetch the creator's department
+const creatorDepartment = userDepartment || (await db.user.findUnique({
+  where: { id: user.id },
+  select: { department: true }
+})).department
 
-    // Validate items have required fields
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      if (!item.itemId || !item.quantity || !item.unitPrice) {
-        console.log(`Item ${i} validation failed:`, item)
-        return NextResponse.json(
-          { error: `Item ${i + 1} is missing required fields (itemId, quantity, or unitPrice)` },
-          { status: 400 }
-        )
-      }
-    }
+// Use the creator's department if not provided in the request body
+const requestDepartment = department || creatorDepartment
 
-    // Verify user exists in database
-    const dbUser = await db.user.findUnique({
-      where: { id: user.id }
-    })
+// Validate required fields
+if (!title || !requestDepartment || !items || !items.length) {
+  console.log('Validation failed:', { title: !!title, department: !!requestDepartment, items: items?.length })
+  return NextResponse.json(
+    { error: 'Missing required fields' },
+    { status: 400 }
+  )
+}
 
-    if (!dbUser) {
-      console.log('User not found in database:', user.id)
-      return NextResponse.json(
-        { error: 'User not found in database' },
-        { status: 400 }
-      )
-    }
-    
-    console.log('User found:', { id: dbUser.id, email: dbUser.email, name: dbUser.name })
-
-    // Calculate total amount
-    const totalAmount = items.reduce(
-      (sum: number, item: any) => sum + (item.quantity * item.unitPrice),
-      0
+// Validate items have required fields
+for (let i = 0; i < items.length; i++) {
+  const item = items[i]
+  if (!item.itemId || !item.quantity || !item.unitPrice) {
+    console.log(`Item ${i} validation failed:`, item)
+    return NextResponse.json(
+      { error: `Item ${i + 1} is missing required fields (itemId, quantity, or unitPrice)` },
+      { status: 400 }
     )
+  }
+}
 
-    // Create request with items
-    const newRequest = await db.request.create({
-      data: {
-        title,
-        description,
-        department,
-        priority: priority || 'MEDIUM',
-        totalAmount,
-        requesterId: user.id,
-        items: {
-          create: items.map((item: any) => ({
-            itemId: item.itemId,
-            quantity: parseInt(item.quantity),
-            unitPrice: parseFloat(item.unitPrice),
-            totalPrice: parseFloat(item.quantity) * parseFloat(item.unitPrice),
-            notes: item.notes
-          }))
-        }
-      },
-      include: {
-        requester: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        items: {
-          include: {
-            item: true
-          }
-        }
+// Verify user exists in database
+const dbUser = await db.user.findUnique({
+  where: { id: user.id }
+})
+
+if (!dbUser) {
+  console.log('User not found in database:', user.id)
+  return NextResponse.json(
+    { error: 'User not found in database' },
+    { status: 400 }
+  )
+}
+    
+console.log('User found:', { id: dbUser.id, email: dbUser.email, name: dbUser.name })
+
+// Calculate total amount
+const totalAmount = items.reduce(
+  (sum: number, item: { quantity: number; unitPrice: number }) => sum + (item.quantity * item.unitPrice),
+  0
+)
+
+// Create request with items
+const newRequest = await db.request.create({
+  data: {
+    title,
+    description,
+    department: requestDepartment,
+    priority: priority || 'MEDIUM',
+    totalAmount,
+    requesterId: user.id,
+    items: {
+      create: items.map((item: { itemId: string; quantity: number; unitPrice: number; notes?: string }) => ({
+        itemId: item.itemId,
+        quantity: parseInt(item.quantity),
+        unitPrice: parseFloat(item.unitPrice),
+        totalPrice: parseFloat(item.quantity) * parseFloat(item.unitPrice),
+        notes: item.notes
+      }))
+    }
+  },
+  include: {
+    requester: {
+      select: {
+        id: true,
+        name: true,
+        email: true
       }
-    })
+    },
+    items: {
+      include: {
+        item: true
+      }
+    }
+  }
+})
 
     // Create approval workflow - assign to any manager (they can take ownership when approving)
     const managers = await db.user.findMany({

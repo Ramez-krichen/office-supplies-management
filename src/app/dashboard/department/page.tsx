@@ -8,14 +8,14 @@ import {
   Clock,
   CheckCircle,
   BarChart3,
-  Award,
-  Target
+  Award
 } from 'lucide-react'
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { canAccessDashboard } from '@/lib/access-control'
+import { UserActivityModal } from '@/components/modals/UserActivityModal'
 
 interface Stat {
   name: string
@@ -88,6 +88,22 @@ function DepartmentDashboardContent() {
   const [availableDepartments, setAvailableDepartments] = useState<Array<{id: string, name: string, code: string}>>([])
   const [loadingDepartments, setLoadingDepartments] = useState(true)
   const [needsDepartmentSelection, setNeedsDepartmentSelection] = useState(false)
+  
+  // User Activity Modal state
+  const [selectedUser, setSelectedUser] = useState<DepartmentUser | null>(null)
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
+
+  // Handle user click to show activity modal
+  const handleUserClick = (user: DepartmentUser) => {
+    setSelectedUser(user)
+    setIsActivityModalOpen(true)
+  }
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setIsActivityModalOpen(false)
+    setSelectedUser(null)
+  }
 
   // Fetch available departments
   const fetchDepartments = async () => {
@@ -463,7 +479,11 @@ function DepartmentDashboardContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {departmentUsers.length > 0 ? (
                 departmentUsers.map((user) => (
-                  <div key={user.id} className="border border-gray-200 rounded-lg p-4">
+                  <div 
+                    key={user.id} 
+                    className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                    onClick={() => handleUserClick(user)}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-medium text-gray-900">{user.name}</h4>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
@@ -494,6 +514,16 @@ function DepartmentDashboardContent() {
           </div>
         </div>
       </div>
+      {selectedUser && (
+        <UserActivityModal
+          isOpen={isActivityModalOpen}
+          onClose={handleModalClose}
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+          userEmail={selectedUser.email}
+          lastSignIn={selectedUser.lastSignIn}
+        />
+      )}
     </DashboardLayout>
   )
 }

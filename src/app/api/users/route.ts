@@ -49,12 +49,12 @@ export async function GET(request: Request) {
       },
     })
 
-    // Sort users by role priority: ADMIN first, then MANAGER, then EMPLOYEE
+    // Sort users by role priority: ADMIN first, then GENERAL_MANAGER, then MANAGER, then EMPLOYEE
     // Within each role, active users appear before inactive users
     const sortedUsers = users.sort((a, b) => {
-      const roleOrder = { 'ADMIN': 0, 'MANAGER': 1, 'EMPLOYEE': 2 }
-      const aRoleOrder = roleOrder[a.role as keyof typeof roleOrder] ?? 3
-      const bRoleOrder = roleOrder[b.role as keyof typeof roleOrder] ?? 3
+      const roleOrder = { 'ADMIN': 0, 'GENERAL_MANAGER': 1, 'MANAGER': 2, 'EMPLOYEE': 3 }
+      const aRoleOrder = roleOrder[a.role as keyof typeof roleOrder] ?? 4
+      const bRoleOrder = roleOrder[b.role as keyof typeof roleOrder] ?? 4
 
       // First, sort by role
       if (aRoleOrder !== bRoleOrder) {

@@ -1,43 +1,96 @@
-const fetch = require('node-fetch');
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
-async function testAuthFix() {
-  console.log('🧪 Testing authentication fix...\n');
-  
+const prisma = new PrismaClient();
+
+async function testDatabaseAndAuth() {
   try {
-    // Test 1: Check if server is running
-    console.log('1. Testing server connectivity...');
-    const healthResponse = await fetch('http://localhost:3000/api/auth/session');
-    console.log(`   Server status: ${healthResponse.status}`);
+    console.log('🔍 Testing database connection and schema...');
     
-    if (healthResponse.status === 200) {
-      const sessionData = await healthResponse.json();
-      console.log('   Session data:', sessionData);
+    // Test database connection
+    await prisma.$connect();
+    console.log('✅ Database connection successful');
+    
+    // Check if users table exists by trying to count users
+    const userCount = await prisma.user.count();
+    console.log(`✅ Users table exists with ${userCount} users`);
+    
+    // Check if we have any test users
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true
+      },
+      take: 5
+    });
+    
+    if (users.length > 0) {
+      console.log('✅ Found test users in database:');
+      users.forEach(user => {
+        console.log(`   - ${user.email} (${user.role}) - ${user.status}`);
+      });
+      
+      // Test password validation for the first user
+      const firstUser = await prisma.user.findFirst({
+        where: { status: 'ACTIVE' }
+      });
+      
+      if (firstUser) {
+        console.log(`\n🔐 Testing password validation for: ${firstUser.email}`);
+        
+        // Test with default password (usually 'password' for seeded users)
+        const testPasswords = ['password123', 'password', 'admin123', 'test123'];
+        
+        for (const testPassword of testPasswords) {
+          try {
+            const isValid = await bcrypt.compare(testPassword, firstUser.password);
+            if (isValid) {
+              console.log(`✅ Password validation successful with: "${testPassword}"`);
+              break;
+            } else {
+              console.log(`❌ Password "${testPassword}" is not valid`);
+            }
+          } catch (error) {
+            console.log(`❌ Error testing password "${testPassword}":`, error.message);
+          }
+        }
+      }
+    } else {
+      console.log('⚠️ No users found in database. Authentication will fail until users are created.');
     }
     
-    // Test 2: Try to access admin dashboard (should redirect to login)
-    console.log('\n2. Testing admin dashboard access...');
-    const dashboardResponse = await fetch('http://localhost:3000/dashboard/admin');
-    console.log(`   Dashboard status: ${dashboardResponse.status}`);
+    // Test other important tables
+    const tableChecks = [
+      { name: 'departments', model: prisma.department },
+      { name: 'categories', model: prisma.category },
+      { name: 'suppliers', model: prisma.supplier },
+      { name: 'items', model: prisma.item }
+    ];
     
-    // Test 3: Check notifications endpoint (should require auth)
-    console.log('\n3. Testing notifications endpoint...');
-    const notificationsResponse = await fetch('http://localhost:3000/api/admin/notifications?status=UNREAD');
-    console.log(`   Notifications status: ${notificationsResponse.status}`);
-    
-    console.log('\n✅ Server is running and responding correctly!');
-    console.log('\n🎯 Next steps:');
-    console.log('1. Go to http://localhost:3000');
-    console.log('2. Clear browser cookies/session');
-    console.log('3. Login with: admin@example.com / admin123');
-    console.log('4. Test approval functionality');
+    console.log('\n📊 Checking other tables:');
+    for (const { name, model } of tableChecks) {
+      try {
+        const count = await model.count();
+        console.log(`   - ${name}: ${count} records`);
+      } catch (error) {
+        console.log(`   - ${name}: Error - ${error.message}`);
+      }
+    }
     
   } catch (error) {
-    console.error('❌ Error testing server:', error.message);
-    console.log('\n🔧 Troubleshooting:');
-    console.log('- Make sure the development server is running');
-    console.log('- Check if port 3000 is available');
-    console.log('- Try restarting the server with: npm run dev');
+    console.error('❌ Database test failed:', error);
+    
+    if (error.message.includes('does not exist')) {
+      console.log('\n💡 The database schema appears to be missing. Try running:');
+      console.log('   npx prisma db push --force-reset');
+      console.log('   npx prisma db seed');
+    }
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-testAuthFix();
+testDatabaseAndAuth();

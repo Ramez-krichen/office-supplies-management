@@ -5,8 +5,8 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 const prismaClientSingleton = () => {
-  // Use fallback database URL that matches the expected location
-  const databaseUrl = process.env.DATABASE_URL || 'file:./prisma/comprehensive.db'
+  // Use standard development database URL
+  const databaseUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db'
   
   console.log('Database URL:', databaseUrl)
   

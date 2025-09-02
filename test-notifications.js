@@ -1,7 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 
+// Test the notification system
 // Set the DATABASE_URL environment variable
-process.env.DATABASE_URL = 'file:./comprehensive.db';
+process.env.DATABASE_URL = 'file:./prisma/dev.db';
 
 const prisma = new PrismaClient({
   log: ['query', 'error', 'warn'],

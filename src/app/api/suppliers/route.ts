@@ -4,7 +4,10 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { checkAccess, createFeatureAccessCheck } from '@/lib/server-access-control'
-import { detectAndUpdateSupplierCategories, parseSupplierCategories } from '@/lib/supplier-category-detection'
+import { 
+  detectAndUpdateSupplierCategoriesEnhanced, 
+  parseSupplierCategoriesEnhanced 
+} from '@/lib/supplier-category-detection'
 
 // GET /api/suppliers - List all suppliers
 export async function GET(request: NextRequest) {
@@ -17,13 +20,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
-    const status = searchParams.get('status')
     const search = searchParams.get('search')
+    const enhanced = searchParams.get('enhanced') !== 'false' // Default to enhanced parsing
 
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: any = {}
+    const where: Record<string, any> = {}
     
     if (search) {
       where.OR = [
@@ -36,7 +39,23 @@ export async function GET(request: NextRequest) {
     const [suppliers, total] = await Promise.all([
       prisma.supplier.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+          contactPerson: true,
+          contactTitle: true,
+          website: true,
+          taxId: true,
+          paymentTerms: true,
+          notes: true,
+          status: true,
+          categories: true,
+          categoriesDetectedAt: true,
+          createdAt: true,
+          updatedAt: true,
           items: {
             select: {
               id: true
@@ -60,29 +79,57 @@ export async function GET(request: NextRequest) {
       prisma.supplier.count({ where })
     ])
 
-    // Transform data to match frontend interface
-    const transformedSuppliers = suppliers.map(supplier => ({
-      id: supplier.id,
-      name: supplier.name,
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
-      contactPerson: supplier.contactPerson || '',
-      contactTitle: supplier.contactTitle || '',
-      website: supplier.website || '',
-      taxId: supplier.taxId || '',
-      paymentTerms: supplier.paymentTerms || 'Net 30',
-      itemsCount: supplier.items.length,
-      totalOrders: supplier.purchaseOrders.length,
-      lastOrderDate: supplier.purchaseOrders[0]?.orderDate.toISOString().split('T')[0] || '',
-      status: 'Active' as const,
-      rating: 0,
-      categories: parseSupplierCategories(supplier.categories),
-      categoriesDetectedAt: supplier.categoriesDetectedAt?.toISOString() || null,
-      createdAt: supplier.createdAt.toISOString().split('T')[0],
-      updatedAt: supplier.updatedAt.toISOString().split('T')[0],
-      notes: supplier.notes || ''
-    }))
+    // Transform data to match frontend interface with enhanced category parsing
+    const transformedSuppliers = suppliers.map(supplier => {
+      let categoryData: { categories: string[], confidence: number, detectionMethods: string[] } = { 
+        categories: [], 
+        confidence: 0, 
+        detectionMethods: [] 
+      }
+      
+      if (enhanced && supplier.categories) {
+        const parsed = parseSupplierCategoriesEnhanced(supplier.categories)
+        categoryData = {
+          categories: parsed.categories,
+          confidence: parsed.confidence || 0,
+          detectionMethods: parsed.detectionMethods || []
+        }
+      } else if (supplier.categories) {
+        // Fallback to basic parsing
+        try {
+          const parsed = JSON.parse(supplier.categories)
+          categoryData.categories = Array.isArray(parsed) ? parsed : (parsed.categories || [])
+        } catch {
+          categoryData.categories = []
+        }
+      }
+
+      return {
+        id: supplier.id,
+        name: supplier.name,
+        email: supplier.email || '',
+        phone: supplier.phone || '',
+        address: supplier.address || '',
+        contactPerson: supplier.contactPerson || '',
+        contactTitle: supplier.contactTitle || '',
+        website: supplier.website || '',
+        taxId: supplier.taxId || '',
+        paymentTerms: supplier.paymentTerms || 'Net 30',
+        itemsCount: supplier.items.length,
+        totalOrders: supplier.purchaseOrders.length,
+        lastOrderDate: supplier.purchaseOrders[0]?.orderDate.toISOString().split('T')[0] || '',
+        status: 'Active' as const,
+        rating: 0,
+        categories: categoryData.categories,
+        categoryConfidence: categoryData.confidence,
+        categoryDetectionMethods: categoryData.detectionMethods,
+        categoriesDetectedAt: supplier.categoriesDetectedAt?.toISOString() || null,
+        createdAt: supplier.createdAt.toISOString().split('T')[0],
+        updatedAt: supplier.updatedAt.toISOString().split('T')[0],
+        notes: supplier.notes || '',
+        enhanced
+      }
+    })
 
     return NextResponse.json({
       suppliers: transformedSuppliers,
@@ -122,7 +169,8 @@ export async function POST(request: NextRequest) {
       taxId,
       paymentTerms,
       notes,
-      categories
+      categories,
+      autoDetectCategories = true
     } = body
 
     // Validate required fields
@@ -186,20 +234,26 @@ export async function POST(request: NextRequest) {
         data: sanitizedData
       })
 
-      // If no manual categories provided, try to auto-detect from existing items
-      // (This would be useful if items are added before supplier creation in some workflows)
-      if (!categories || categories.length === 0) {
-        // Schedule category detection for later (after items might be added)
+      // Enhanced auto-detection based on supplier profile
+      if (autoDetectCategories && (!categories || categories.length === 0)) {
+        // Schedule enhanced category detection
         setTimeout(async () => {
           try {
-            await detectAndUpdateSupplierCategories(newSupplier.id)
+            const detection = await detectAndUpdateSupplierCategoriesEnhanced(newSupplier.id)
+            if (detection) {
+              console.log(`Enhanced auto-detection for new supplier ${newSupplier.name}:`, {
+                categories: detection.categories,
+                confidence: detection.confidence,
+                methods: detection.detectionMethods
+              })
+            }
           } catch (error) {
-            console.error('Error in background category detection:', error)
+            console.error('Error in background enhanced category detection:', error)
           }
         }, 1000)
       }
 
-      // Create audit log in a separate try-catch to ensure it doesn't affect the main operation
+      // Create audit log
       try {
         await prisma.auditLog.create({
           data: {
@@ -207,11 +261,10 @@ export async function POST(request: NextRequest) {
             entity: 'Supplier',
             entityId: newSupplier.id,
             performedBy: session.user.id,
-            details: `Created supplier: ${newSupplier.name}`
+            details: `Created supplier: ${newSupplier.name}${autoDetectCategories ? ' (auto-detection enabled)' : ''}`
           }
         })
       } catch (logError) {
-        // Just log the error but don't fail the operation if audit logging fails
         console.error('Error creating audit log:', logError)
       }
 

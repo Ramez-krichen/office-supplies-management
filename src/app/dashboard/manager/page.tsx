@@ -1,21 +1,27 @@
 'use client'
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import Link from 'next/link'
 import {
-  FileText,
   Users,
-  Clock,
+  ShoppingCart,
+  Package,
   TrendingUp,
   CheckCircle,
   XCircle,
+  Clock,
+  DollarSign,
   AlertTriangle,
   BarChart3
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { toast } from 'react-hot-toast'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { safeFetch, safeJsonParse } from '@/lib/api-utils'
 import { canAccessDashboard } from '@/lib/access-control'
 
 interface Stat {
@@ -59,180 +65,113 @@ interface ManagerDashboardData {
   departmentInfo: DepartmentInfo
 }
 
+interface DashboardData {
+  stats: Stat[]
+  recentRequests: RecentRequest[]
+  pendingApprovals: PendingApproval[]
+  departmentInfo: DepartmentInfo
+}
+
 const getStatConfig = (name: string) => {
   const configs = {
-    'Department Requests': { icon: FileText, color: 'bg-blue-500' },
+    'Department Requests': { icon: Package, color: 'bg-blue-500' },
     'Pending Approvals': { icon: Clock, color: 'bg-yellow-500' },
     'Team Members': { icon: Users, color: 'bg-green-500' },
     'Monthly Spending': { icon: TrendingUp, color: 'bg-purple-500' },
   }
-  return configs[name as keyof typeof configs] || { icon: FileText, color: 'bg-gray-500' }
+  return configs[name as keyof typeof configs] || { icon: Package, color: 'bg-gray-500' }
 }
 
 export default function ManagerDashboardPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
   const [dashboardData, setDashboardData] = useState<ManagerDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [approving, setApproving] = useState<string | null>(null)
 
   // Access control check
   useEffect(() => {
     if (status === 'loading') return
 
     if (!session) {
-      router.push('/auth/signin')
+      redirect('/auth/signin')
       return
     }
 
     if (!canAccessDashboard(session.user.role, 'MANAGER')) {
-      router.push('/dashboard')
+      redirect('/dashboard')
       return
     }
 
     fetchDashboardData()
-  }, [session, status, router])
+  }, [session, status])
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/dashboard/manager')
-      if (!response.ok) {
-        throw new Error('Failed to fetch manager dashboard data')
-      }
-      const data = await response.json()
+      const data = await safeFetch('/api/dashboard/manager') as DashboardData
       setDashboardData(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      toast.error('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApproval = async (requestId: string, action: 'approve' | 'reject') => {
-    console.log(`🔧 Manager Button clicked: ${action} for request ${requestId}`)
+  const handleApproveRequest = async (requestId: string, approved: boolean, comments?: string) => {
+    if (!session?.user?.id) {
+      toast.error('Please log in again')
+      return
+    }
 
     try {
-      // First check if we have a valid session
+      setApproving(requestId)
+      
       console.log('🔐 Checking session status...')
       const sessionResponse = await fetch('/api/auth/session')
       console.log(`📡 Session check status: ${sessionResponse.status}`)
-
-      if (!sessionResponse.ok) {
-        console.error('❌ No valid session found')
-        toast.error('Please log in again to continue')
+      
+      if (!sessionResponse.ok || sessionResponse.status === 401) {
+        console.log('❌ Session invalid, redirecting to login')
         window.location.href = '/auth/signin'
         return
       }
 
-      const sessionData = await sessionResponse.json()
+      const sessionData = await safeJsonParse(sessionResponse) as { user?: { id?: string } }
       console.log('✅ Session data:', sessionData)
 
-      if (!sessionData?.user) {
-        console.error('❌ No user in session')
-        toast.error('Please log in again to continue')
+      if (!sessionData.user?.id) {
+        console.log('❌ No user in session, redirecting to login')
         window.location.href = '/auth/signin'
         return
       }
 
-      const status = action === 'approve' ? 'APPROVED' : 'REJECTED'
-      let comments = ''
+      console.log(`📤 ${approved ? 'Approving' : 'Rejecting'} request ${requestId}...`)
 
-      // For rejections, prompt for a reason
-      if (action === 'reject') {
-        comments = prompt('Please provide a reason for rejection:') || ''
-        if (!comments.trim()) {
-          toast.error('A reason is required for rejection.')
-          return
-        }
-      }
-
-      console.log(`📡 Making API call to /api/requests/${requestId}/approve`)
-      console.log(`📦 Payload:`, { status, comments })
-
-      const response = await fetch(`/api/requests/${requestId}/approve`, {
+      const data = await safeFetch(`/api/requests/${requestId}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin', // Ensure cookies are sent
-        body: JSON.stringify({ status, comments })
+        body: JSON.stringify({
+          approved,
+          comments: comments || '',
+          managerId: session.user.id
+        }),
       })
 
-      console.log(`📡 API Response status: ${response.status}`)
-      console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()))
-
-      if (response.ok) {
-        try {
-          const responseText = await response.text()
-          console.log(`📄 Raw response text:`, responseText)
-
-          if (!responseText || responseText.trim() === '') {
-            console.error(`❌ Empty response received`)
-            toast.error(`Server returned empty response`)
-            return
-          }
-
-          let data
-          try {
-            data = JSON.parse(responseText)
-          } catch (parseError) {
-            console.error(`❌ Failed to parse response as JSON:`, parseError)
-            console.error(`❌ Response text was:`, responseText)
-            toast.error(`Invalid response format from server`)
-            return
-          }
-
-          console.log(`✅ Success response:`, data)
-
-          if (data && typeof data === 'object') {
-            toast.success(data.message || `Request ${action}d successfully`)
-            // Refresh dashboard data
-            fetchDashboardData()
-          } else {
-            console.error(`❌ Unexpected response format:`, data)
-            toast.error(`Unexpected response format`)
-          }
-        } catch (responseError) {
-          console.error(`❌ Error reading response:`, responseError)
-          toast.error(`Error reading server response`)
-        }
-      } else {
-        try {
-          const errorText = await response.text()
-          console.log(`📄 Error response text:`, errorText)
-
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-          } catch (parseError) {
-            console.error(`❌ Failed to parse error response:`, parseError)
-            errorData = { error: `Server error (${response.status})` }
-          }
-
-          console.error(`❌ Error response:`, errorData)
-
-          // Handle specific error cases
-          if (response.status === 401) {
-            toast.error('Session expired. Please log in again.')
-            window.location.href = '/auth/signin'
-          } else if (response.status === 403) {
-            toast.error('You do not have permission to perform this action.')
-          } else {
-            toast.error(errorData.error || `Failed to ${action} request`)
-          }
-        } catch (errorResponseError) {
-          console.error(`❌ Error reading error response:`, errorResponseError)
-          toast.error(`Failed to ${action} request`)
-        }
-      }
+      console.log('✅ Request approval response:', data)
+      const result = data as { message?: string }
+      toast.success(result.message || `Request ${approved ? 'approved' : 'rejected'} successfully`)
+      
+      // Refresh dashboard data
+      fetchDashboardData()
     } catch (error) {
-      console.error('❌ Error processing approval:', error)
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        toast.error('Network error. Please check your connection and try again.')
-      } else {
-        toast.error(`An error occurred while processing the ${action}`)
-      }
+      console.error('❌ Error approving request:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to process request')
+    } finally {
+      setApproving(null)
     }
   }
 
@@ -304,22 +243,6 @@ export default function ManagerDashboardPage() {
               {departmentInfo.name} • {departmentInfo.managerName}
             </p>
           </div>
-          <div className="flex space-x-3">
-            <Link
-              href="/dashboard/department"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Department View
-            </Link>
-            <Link
-              href="/reports"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Generate Report
-            </Link>
-          </div>
         </div>
 
         {/* Stats Grid */}
@@ -361,66 +284,74 @@ export default function ManagerDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pending Approvals */}
           <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
-                  <AlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
-                  Pending Approvals
-                </h3>
-                <Link
-                  href="/requests?status=pending"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  View all
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {pendingApprovals.length > 0 ? (
-                  pendingApprovals.map((request) => (
-                    <div key={request.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{request.title}</p>
-                          <p className="text-xs text-gray-500">
-                            by {request.requester} • {request.date}
-                          </p>
-                        </div>
-                        <span className={`text-xs font-medium ${getPriorityColor(request.priority)}`}>
-                          {request.priority}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          {request.amount} • {request.itemCount} items
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleApproval(request.id, 'approve')}
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleApproval(request.id, 'reject')}
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
-                          >
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6">
-                    <CheckCircle className="mx-auto h-12 w-12 text-green-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">All caught up!</h3>
-                    <p className="mt-1 text-sm text-gray-500">No pending approvals at the moment.</p>
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 mr-2 text-yellow-500" />
+                    <CardTitle>Pending Approvals</CardTitle>
                   </div>
-                )}
-              </div>
-            </div>
+                  <Link href="/requests?status=pending">
+                    <Button variant="ghost" size="sm">View all</Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {pendingApprovals.length > 0 ? (
+                    pendingApprovals.map((request) => (
+                      <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{request.title}</p>
+                            <p className="text-xs text-gray-500">
+                              by {request.requester} • {request.date}
+                            </p>
+                          </div>
+                          <div className="text-xs">
+                            <Badge className={getPriorityColor(request.priority)}>
+                              {request.priority}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-600">
+                            {request.amount} • {request.itemCount} items
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleApproveRequest(request.id, true)}
+                              className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => {
+                                const reason = prompt('Please provide a reason for rejection:') || ''
+                                if (reason.trim()) {
+                                  handleApproveRequest(request.id, false, reason)
+                                } else {
+                                  toast.error('A reason is required for rejection.')
+                                }
+                              }}
+                              className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-green-600 text-lg">
+                      All caught up!
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Recent Department Requests */}
@@ -460,7 +391,7 @@ export default function ManagerDashboardPage() {
                   ))
                 ) : (
                   <div className="text-center py-6">
-                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                    <Package className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No recent requests</h3>
                     <p className="mt-1 text-sm text-gray-500">Department requests will appear here.</p>
                   </div>

@@ -10,5 +10,7 @@
         "**/CVS": true,
         "**/.ruby-lsp": true,
         ".yoyo": true
-    }
+    },
+    "chatgpt.openOnStartup": false,
+    "CodeGPT.apiKey": "OpenRouter"
 }

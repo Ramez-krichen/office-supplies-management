@@ -2,9 +2,10 @@
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Plus, Search, Building2, Mail, Phone, MapPin, Edit, Trash2, Eye, Download, Filter, Users } from 'lucide-react'
 import { SupplierModal } from '@/components/modals/SupplierModal'
-import { ConfirmModal } from '@/components/ui/modal'
 import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { ExportButton } from '@/components/ui/export'
 import { toast } from 'react-hot-toast'
@@ -32,6 +33,8 @@ interface Supplier {
 }
 
 export default function SuppliersPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [categories, setCategories] = useState<Array<{id: string, name: string}>>([])
   const [loading, setLoading] = useState(true)
@@ -49,14 +52,51 @@ export default function SuppliersPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeactivating, setIsDeactivating] = useState(false)
   
+  // Access control check
+  useEffect(() => {
+    if (status === 'loading') return // Still loading
+    
+    if (!session) {
+      router.push('/auth/signin')
+      return
+    }
+    
+    // Only ADMINs can access suppliers page
+    if (session.user?.role !== 'ADMIN') {
+      toast.error('Access denied. Only administrators can manage suppliers.')
+      router.push('/dashboard/employee') // Redirect to appropriate dashboard
+      return
+    }
+  }, [session, status, router])
+
   // Fetch suppliers from API
   const fetchSuppliers = async () => {
+    // Don't fetch if user doesn't have access
+    if (status !== 'authenticated' || !session?.user || session.user.role !== 'ADMIN') {
+      setLoading(false)
+      return
+    }
+    
     try {
       setLoading(true)
       const response = await fetch('/api/suppliers')
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch suppliers')
+        // Get more specific error information
+        let errorMessage = `HTTP ${response.status} ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+          console.error('API Error Details:', errorData)
+        } catch (jsonError) {
+          console.error('Could not parse error response as JSON:', jsonError)
+          const textError = await response.text()
+          console.error('Raw error response:', textError)
+          errorMessage = textError || errorMessage
+        }
+        throw new Error(`Failed to fetch suppliers: ${errorMessage}`)
       }
+      
       const data = await response.json()
       
       // Preserve categories from existing suppliers when refreshing
@@ -69,7 +109,7 @@ export default function SuppliersPage() {
         }, {} as Record<string, string[]>)
         
         // Merge new suppliers with existing categories
-        const mergedSuppliers = newSuppliers.map(newSupplier => {
+        const mergedSuppliers = newSuppliers.map((newSupplier: Supplier) => {
           if (existingSupplierMap[newSupplier.id]) {
             return {
               ...newSupplier,
@@ -85,7 +125,7 @@ export default function SuppliersPage() {
       }
     } catch (error) {
       console.error('Error fetching suppliers:', error)
-      toast.error('Failed to load suppliers')
+      toast.error(error instanceof Error ? error.message : 'Failed to load suppliers')
     } finally {
       setLoading(false)
     }
@@ -93,6 +133,11 @@ export default function SuppliersPage() {
 
   // Fetch categories from API
   const fetchCategories = async () => {
+    // Don't fetch if user doesn't have access
+    if (status !== 'authenticated' || !session?.user || session.user.role !== 'ADMIN') {
+      return
+    }
+    
     try {
       const response = await fetch('/api/categories')
       if (!response.ok) {
@@ -107,13 +152,40 @@ export default function SuppliersPage() {
   }
 
   useEffect(() => {
-    fetchSuppliers()
-    fetchCategories()
-  }, [])
-  
-  // Get unique categories for filter
-  const supplierCategories = Array.from(new Set(suppliers.flatMap(supplier => supplier.categories || [])))
-  
+    // Only fetch data if user has proper access
+    if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
+      fetchSuppliers()
+      fetchCategories()
+    }
+  }, [status, session?.user?.role])
+
+  // Show loading while checking authentication and authorization
+  if (status === 'loading') {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  // Show loading while data is being fetched (after auth check passes)
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  // Don't render anything if user doesn't have access (redirect will handle this)
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return null
+  }
+
   const handleAddSupplier = async (supplierData: Partial<Supplier>) => {
     try {
       // Validate required fields before sending request
@@ -226,10 +298,10 @@ export default function SuppliersPage() {
       // Create a copy of the data to send to the API
       const apiData = {
         name: supplierData.name,
-        email: supplierData.email || '',
-        phone: supplierData.phone || '',
-        address: supplierData.address || '',
-        contactPerson: supplierData.contactPerson || ''
+        email: supplierData.email?.trim() || undefined,
+        phone: supplierData.phone?.trim() || undefined,
+        address: supplierData.address?.trim() || undefined,
+        contactPerson: supplierData.contactPerson?.trim() || undefined
       }
       
       // Update the supplier without categories
@@ -263,7 +335,10 @@ export default function SuppliersPage() {
 
       toast.success('Supplier updated successfully')
       setEditingSupplier(null)
-      fetchSuppliers() // Refresh the list
+      // Refresh the list immediately to show any category changes
+      setTimeout(() => {
+        fetchSuppliers()
+      }, 100)
     } catch (error) {
       console.error('Error updating supplier:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to update supplier')
@@ -324,6 +399,14 @@ export default function SuppliersPage() {
     return matchesSearch && matchesStatus && matchesCategory
   })
   
+  // Get unique categories from suppliers and database categories
+  const supplierCategories = [
+    ...new Set([
+      ...categories.map(cat => cat.name),
+      ...suppliers.flatMap(supplier => supplier.categories || [])
+    ])
+  ].sort()
+  
   const exportData = filteredSuppliers.map(supplier => ({
     ID: supplier.id,
     Name: supplier.name,
@@ -344,16 +427,6 @@ export default function SuppliersPage() {
     'Created Date': supplier.createdAt || '',
     Notes: supplier.notes || ''
   }))
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-        </div>
-      </DashboardLayout>
-    )
-  }
 
   return (
     <DashboardLayout>
@@ -592,7 +665,13 @@ export default function SuppliersPage() {
       {/* Edit Supplier Modal */}
       <SupplierModal
         isOpen={!!editingSupplier}
-        onClose={() => setEditingSupplier(null)}
+        onClose={() => {
+          setEditingSupplier(null)
+          // Refresh suppliers when modal closes to show any category updates
+          setTimeout(() => {
+            fetchSuppliers()
+          }, 100)
+        }}
         onSave={handleEditSupplier}
         mode="edit"
         title="Edit Supplier"
@@ -626,11 +705,14 @@ export default function SuppliersPage() {
         isOpen={!!supplierToDeactivate}
         onClose={() => setSupplierToDeactivate(null)}
         onConfirm={handleDeactivateSupplier}
-        type={supplierToDeactivate?.status === 'Active' ? 'deactivate' : 'activate'}
+        type={supplierToDeactivate?.status === 'Active' ? 'deactivate' : 'warning'}
         entityType="supplier"
         entityName={supplierToDeactivate?.name}
         loading={isDeactivating}
+        title={`${supplierToDeactivate?.status === 'Active' ? 'Deactivate' : 'Activate'} Supplier`}
+        message={`Are you sure you want to ${supplierToDeactivate?.status === 'Active' ? 'deactivate' : 'activate'} this supplier?`}
       />
     </DashboardLayout>
   )
 }
+

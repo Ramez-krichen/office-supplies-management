@@ -1,27 +1,31 @@
 {
   "overview": {
     "totalItems": 150,
-    "activeItems": 113,
-    "lowStockItems": 7,
-    "outOfStockItems": 1,
-    "totalInventoryValue": 3884563.01,
+    "activeItems": 112,
+    "lowStockItems": 16,
+    "outOfStockItems": 0,
+    "totalInventoryValue": 3813929.19,
     "totalOrders": 50,
     "pendingOrders": 7,
-    "monthlySpending": 401748.07
+    "monthlySpending": 393628.61
   },
   "categorySpending": {
-    "Writing Supplies": 482921.72000000003,
-    "Paper Products": 889100.9299999999,
-    "Office Equipment": 339430.52,
-    "Technology": 669209.6900000001,
-    "Storage & Organization": 398382.94,
-    "Cleaning Supplies": 440438.55,
-    "Break Room Supplies": 665078.66
+    "Writing Supplies": 481689.11,
+    "Paper Products": 588411.24,
+    "Office Equipment": 592795.5,
+    "Technology": 491375.28,
+    "Storage & Organization": 430410.08999999997,
+    "Cleaning Supplies": 905155.24,
+    "Break Room Supplies": 324092.73
   },
   "monthlyTrend": [
     {
+      "month": "2025-08",
+      "amount": 393628.61
+    },
+    {
       "month": "2025-07",
-      "amount": 401748.07
+      "amount": 0
     },
     {
       "month": "2025-06",
@@ -62,33 +66,29 @@
     {
       "month": "2024-09",
       "amount": 0
-    },
-    {
-      "month": "2024-08",
-      "amount": 0
     }
   ],
   "topSuppliers": [
     {
+      "name": "OfficeMax",
+      "amount": 81358.33
+    },
+    {
+      "name": "Supplies Network",
+      "amount": 41792.17
+    },
+    {
       "name": "W.B. Mason",
-      "amount": 46258.99
+      "amount": 29973.58
     },
     {
-      "name": "Office Essentials",
-      "amount": 46225.65
+      "name": "Amazon Business",
+      "amount": 28817.11
     },
     {
-      "name": "Viking Direct",
-      "amount": 39146.92
-    },
-    {
-      "name": "Discount Office Items",
-      "amount": 33760.81
-    },
-    {
-      "name": "Office Zone",
-      "amount": 28801.35
+      "name": "SupplyWorks",
+      "amount": 27361.3
     }
   ],
-  "lastUpdated": "2025-07-25T13:58:54.963877"
+  "lastUpdated": "2025-08-26T14:47:35.347906"
 }
