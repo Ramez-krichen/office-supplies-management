@@ -11,51 +11,55 @@ export async function GET() {
 
     const { user, userRole } = accessCheck
 
-    // Since there are no departments in the Department table, we'll get unique department names from users
-    const users = await prisma.user.findMany({
-      where: {
-        department: { not: null }
-      },
-      select: {
-        department: true
-      }
-    })
-
-    // Get unique department names
-    const uniqueDepartments = [...new Set(users.map(u => u.department).filter(Boolean))] as string[]
-
     // Build where clause based on user role and department restrictions
-    let allowedDepartments = uniqueDepartments
-
-    // For managers and employees, only show their own department
-    if ((userRole === 'MANAGER' || userRole === 'EMPLOYEE') && user.department) {
-      allowedDepartments = [user.department]
+    const where: any = {
+      status: 'ACTIVE'
     }
 
-    // Create fake department objects for each unique department name
-    const departmentsWithMetrics = await Promise.all(
-      allowedDepartments.map(async (deptName) => {
-        // Skip if deptName is null or undefined (shouldn't happen due to filtering above)
-        if (!deptName) return null
+    // For managers and employees, only show their own department
+    if ((userRole === 'MANAGER' || userRole === 'EMPLOYEE') && user.departmentId) {
+      where.id = user.departmentId
+    }
 
-        // Generate a fake ID and code for each department
-        const fakeId = `dept-${deptName.toLowerCase().replace(/\s+/g, '-')}`
-        const fakeCode = deptName.substring(0, 3).toUpperCase()
-
-        // Get users in this department
-        const deptUsers = await prisma.user.findMany({
-          where: { department: deptName },
+    // Get departments from the Department table
+    const departments = await prisma.department.findMany({
+      where,
+      include: {
+        manager: {
           select: {
             id: true,
             name: true,
-            role: true,
-            status: true
+            email: true
+          }
+        },
+        _count: {
+          select: {
+            users: true
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    })
+
+    // Calculate metrics for each department
+    const departmentsWithMetrics = await Promise.all(
+      departments.map(async (dept) => {
+        // Get active user count
+        const activeUserCount = await prisma.user.count({
+          where: {
+            departmentId: dept.id,
+            status: 'ACTIVE'
           }
         })
 
-        // Get request count for this department
+        // Get request count for this department (check both old and new department fields)
         const requestCount = await prisma.request.count({
-          where: { department: deptName }
+          where: {
+            OR: [
+              { requester: { department: dept.name } },
+              { requester: { departmentId: dept.id } }
+            ]
+          }
         })
 
         // Get current month spending
@@ -66,16 +70,21 @@ export async function GET() {
           where: {
             status: { in: ['APPROVED', 'COMPLETED'] },
             createdAt: { gte: currentMonth },
-            department: deptName
+            requester: { departmentId: dept.id }
           },
           _sum: { totalAmount: true }
         })
 
         // Get monthly purchase orders spending by users in this department
+        const deptUsers = await prisma.user.findMany({
+          where: { departmentId: dept.id },
+          select: { id: true }
+        })
+        
         const deptUserIds = deptUsers.map(u => u.id)
         const monthlyPOSpending = await prisma.purchaseOrder.aggregate({
           where: {
-            status: { in: ['SENT', 'CONFIRMED', 'RECEIVED'] },
+            status: { in: ['APPROVED', 'ORDERED', 'RECEIVED'] },
             createdAt: { gte: currentMonth },
             createdById: { in: deptUserIds }
           },
@@ -86,19 +95,20 @@ export async function GET() {
         const monthlyPOTotal = monthlyPOSpending._sum.totalAmount || 0
         const monthlySpending = monthlyRequestSpending + monthlyPOTotal
 
-        const estimatedBudget = 50000 // Fake budget for calculations
-        const budgetUtilization = (monthlySpending / estimatedBudget) * 100
+        const budget = dept.budget || 0 // Use actual budget or 0 for consistency
+        const budgetUtilization = budget > 0 ? (monthlySpending / budget) * 100 : 0
 
         return {
-          id: fakeId,
-          code: fakeCode,
-          name: deptName,
-          description: `${deptName} Department`,
-          budget: estimatedBudget,
-          status: 'ACTIVE',
+          id: dept.id,
+          code: dept.code,
+          name: dept.name,
+          description: dept.description,
+          budget: dept.budget, // Use actual budget value
+          status: dept.status,
+          manager: dept.manager,
           metrics: {
-            userCount: deptUsers.length,
-            activeUsers: deptUsers.filter(u => u.status === 'ACTIVE').length,
+            userCount: dept._count.users,
+            activeUsers: activeUserCount,
             monthlySpending,
             budgetUtilization: Math.round(budgetUtilization * 100) / 100,
             requestCount
@@ -107,12 +117,9 @@ export async function GET() {
       })
     )
 
-    // Filter out null entries
-    const validDepartments = departmentsWithMetrics.filter(dept => dept !== null)
-
     return NextResponse.json({
-      departments: validDepartments,
-      total: validDepartments.length
+      departments: departmentsWithMetrics,
+      total: departmentsWithMetrics.length
     })
 
   } catch (error) {

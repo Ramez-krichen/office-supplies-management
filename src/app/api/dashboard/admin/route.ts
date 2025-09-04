@@ -212,6 +212,45 @@ export async function GET() {
       totalSpending: dept._sum.totalAmount || 0
     })).sort((a, b) => b.totalSpending - a.totalSpending)
 
+    // Generate monthly spending breakdown (last 6 months)
+    const monthlyBreakdown = []
+    
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+      
+      // Get requests for this month
+      const monthRequests = await prisma.request.aggregate({
+        where: {
+          createdAt: { gte: monthStart, lte: monthEnd },
+          status: { in: ['APPROVED', 'COMPLETED'] }
+        },
+        _sum: { totalAmount: true },
+        _count: true
+      })
+      
+      // Get purchase orders for this month
+      const monthPOs = await prisma.purchaseOrder.aggregate({
+        where: {
+          createdAt: { gte: monthStart, lte: monthEnd },
+          status: { in: ['SENT', 'CONFIRMED', 'RECEIVED'] }
+        },
+        _sum: { totalAmount: true },
+        _count: true
+      })
+      
+      const monthTotal = (monthRequests._sum.totalAmount || 0) + (monthPOs._sum.totalAmount || 0)
+      const monthName = monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      
+      monthlyBreakdown.push({
+        month: monthName,
+        amount: monthTotal,
+        requests: monthRequests._count,
+        purchaseOrders: monthPOs._count,
+        formattedAmount: monthTotal > 1000 ? `$${(monthTotal / 1000).toFixed(1)}k` : `$${monthTotal.toFixed(0)}`
+      })
+    }
+
     // Format pending approvals
     const formattedPendingApprovals = pendingRequestsForApproval.map(request => {
       const totalAmount = request.items.reduce((sum, item) => {
@@ -233,6 +272,7 @@ export async function GET() {
       stats,
       recentRequests: formattedRecentRequests,
       departmentStats: formattedDepartmentStats,
+      monthlyBreakdown,
       recentUsers,
       systemAlerts,
       pendingApprovals: formattedPendingApprovals,

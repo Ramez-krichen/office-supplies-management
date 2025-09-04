@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
     
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { contactPerson: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { email: { contains: search } },
+        { contactPerson: { contains: search } }
       ]
     }
 
@@ -88,18 +88,33 @@ export async function GET(request: NextRequest) {
       }
       
       if (enhanced && supplier.categories) {
-        const parsed = parseSupplierCategoriesEnhanced(supplier.categories)
-        categoryData = {
-          categories: parsed.categories,
-          confidence: parsed.confidence || 0,
-          detectionMethods: parsed.detectionMethods || []
+        try {
+          const parsed = parseSupplierCategoriesEnhanced(supplier.categories)
+          categoryData = {
+            categories: parsed.categories || [],
+            confidence: parsed.confidence || 0,
+            detectionMethods: parsed.detectionMethods || []
+          }
+        } catch (parseError) {
+          console.error(`Error parsing enhanced categories for supplier ${supplier.name}:`, parseError)
+          categoryData.categories = []
         }
       } else if (supplier.categories) {
         // Fallback to basic parsing
         try {
           const parsed = JSON.parse(supplier.categories)
           categoryData.categories = Array.isArray(parsed) ? parsed : (parsed.categories || [])
-        } catch {
+          
+          // Debug logging for development
+          if (supplier.name.toLowerCase().includes('clean')) {
+            console.log(`Clean & Fresh Supplies basic category parsing:`, {
+              raw: supplier.categories,
+              parsed: parsed,
+              final: categoryData.categories
+            })
+          }
+        } catch (parseError) {
+          console.error(`Error parsing basic categories for supplier ${supplier.name}:`, parseError)
           categoryData.categories = []
         }
       }

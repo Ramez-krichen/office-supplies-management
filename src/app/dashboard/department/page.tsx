@@ -58,11 +58,20 @@ interface DepartmentInfo {
   quarterlySpending: number
 }
 
+interface MonthlyBreakdown {
+  month: string
+  amount: number
+  requests: number
+  purchaseOrders: number
+  formattedAmount: string
+}
+
 interface DepartmentDashboardData {
   stats: Stat[]
   recentRequests: RecentRequest[]
   departmentUsers: DepartmentUser[]
   topRequesters: TopRequester[]
+  monthlyBreakdown: MonthlyBreakdown[]
   departmentInfo: DepartmentInfo
 }
 
@@ -248,7 +257,7 @@ function DepartmentDashboardContent() {
     )
   }
 
-  const { stats, recentRequests, departmentUsers, topRequesters, departmentInfo } = dashboardData
+  const { stats, recentRequests, departmentUsers, topRequesters, monthlyBreakdown, departmentInfo } = dashboardData
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -466,6 +475,34 @@ function DepartmentDashboardContent() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Monthly Spending Breakdown */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4 flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2" />
+              Monthly Spending Overview
+            </h3>
+            {monthlyBreakdown && monthlyBreakdown.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                {monthlyBreakdown.map((month) => (
+                  <div key={month.month} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 text-center border border-blue-100">
+                    <div className="text-sm font-medium text-gray-600 mb-2">{month.month}</div>
+                    <div className="text-lg font-bold text-indigo-700 mb-1">{month.formattedAmount}</div>
+                    <div className="text-xs text-gray-500">
+                      {month.requests} requests • {month.purchaseOrders} POs
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      ${month.amount.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No monthly data available</p>
+            )}
           </div>
         </div>
 

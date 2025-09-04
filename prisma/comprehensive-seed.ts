@@ -52,24 +52,51 @@ async function main() {
   await prisma.category.deleteMany()
   await prisma.supplier.deleteMany()
   await prisma.user.deleteMany()
+  await prisma.department.deleteMany()
+
+  // Create Departments first
+  console.log('🏢 Creating departments...')
+  const departmentData = [
+    { code: 'IT', name: 'Information Technology', description: 'Manages technology infrastructure, software development, and IT support services', budget: 500000 },
+    { code: 'HR', name: 'Human Resources', description: 'Handles recruitment, employee relations, benefits, and organizational development', budget: 200000 },
+    { code: 'FINANCE', name: 'Finance', description: 'Manages financial planning, accounting, budgeting, and financial reporting', budget: 300000 },
+    { code: 'OPS', name: 'Operations', description: 'Oversees daily business operations, process optimization, and operational efficiency', budget: 400000 },
+    { code: 'MKT', name: 'Marketing', description: 'Develops marketing strategies, brand management, and customer acquisition', budget: 250000 },
+    { code: 'SALES', name: 'Sales', description: 'Manages sales processes, customer relationships, and revenue generation', budget: 350000 },
+    { code: 'LEGAL', name: 'Legal', description: 'Provides legal counsel, contract management, and compliance oversight', budget: 150000 },
+    { code: 'PROC', name: 'Procurement', description: 'Manages supplier relationships, purchasing processes, and vendor management', budget: 180000 }
+  ]
+
+  const departments = []
+  for (const deptData of departmentData) {
+    const department = await prisma.department.create({
+      data: {
+        ...deptData,
+        status: 'ACTIVE',
+        createdAt: randomDate(startDate, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
+      }
+    })
+    departments.push(department)
+  }
+
+  console.log(`✅ Created ${departments.length} departments`)
 
   // Create Users
   console.log('👥 Creating users...')
   const hashedPassword = await bcrypt.hash('password123', 10)
   
-  const departments = ['IT', 'HR', 'Finance', 'Operations', 'Marketing', 'Sales', 'Legal', 'Procurement']
-  const roles = ['ADMIN', 'MANAGER', 'EMPLOYEE'] as const
-  
   const users = []
   
   // Create single admin user
+  const itDepartment = departments.find(d => d.code === 'IT')!
   const adminUser = await prisma.user.create({
     data: {
       email: 'admin@example.com',
       name: 'Main Admin',
       password: hashedPassword,
       role: 'ADMIN',
-      department: 'IT',
+      department: itDepartment.name,
+      departmentId: itDepartment.id,
       status: 'ACTIVE',
       lastSignIn: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
       createdAt: randomDate(startDate, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
@@ -79,13 +106,15 @@ async function main() {
   
   // Create manager users
   for (let i = 0; i < 8; i++) {
+    const department = departments[i % departments.length]
     const user = await prisma.user.create({
       data: {
         email: `manager${i + 1}@company.com`,
         name: `Manager ${i + 1}`,
         password: hashedPassword,
         role: 'MANAGER',
-        department: departments[i % departments.length],
+        department: department.name,
+        departmentId: department.id,
         status: randomChoice(['ACTIVE', 'ACTIVE', 'ACTIVE', 'INACTIVE']),
         lastSignIn: randomDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), new Date()),
         createdAt: randomDate(startDate, new Date(Date.now() - 180 * 24 * 60 * 60 * 1000))
@@ -96,13 +125,15 @@ async function main() {
   
   // Create employee users
   for (let i = 0; i < 50; i++) {
+    const department = randomChoice(departments)
     const user = await prisma.user.create({
       data: {
         email: `employee${i + 1}@company.com`,
         name: `Employee ${i + 1}`,
         password: hashedPassword,
         role: 'EMPLOYEE',
-        department: randomChoice(departments),
+        department: department.name,
+        departmentId: department.id,
         status: randomChoice(['ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'INACTIVE']),
         lastSignIn: randomDate(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), new Date()),
         createdAt: randomDate(startDate, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))

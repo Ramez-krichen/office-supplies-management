@@ -370,6 +370,36 @@ export default function SuppliersPage() {
     }
   }
   
+  // Handle supplier refresh after category detection
+  const handleSupplierRefresh = async (supplierId: string) => {
+    try {
+      const response = await fetch('/api/suppliers')
+      if (response.ok) {
+        const data = await response.json()
+        const updatedSuppliers = data.suppliers || []
+        setSuppliers(updatedSuppliers)
+        
+        // Update the viewing supplier if it's currently open
+        if (viewingSupplier && viewingSupplier.id === supplierId) {
+          const updatedSupplier = updatedSuppliers.find((s: Supplier) => s.id === supplierId)
+          if (updatedSupplier) {
+            setViewingSupplier(updatedSupplier)
+          }
+        }
+        
+        // Update the editing supplier if it's currently open
+        if (editingSupplier && editingSupplier.id === supplierId) {
+          const updatedSupplier = updatedSuppliers.find((s: Supplier) => s.id === supplierId)
+          if (updatedSupplier) {
+            setEditingSupplier(updatedSupplier)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing supplier:', error)
+    }
+  }
+  
   const handleDeactivateSupplier = async () => {
     if (!supplierToDeactivate) return
     
@@ -687,6 +717,7 @@ export default function SuppliersPage() {
         title="Supplier Details"
         initialData={viewingSupplier || undefined}
         categories={categories}
+        onSupplierRefresh={handleSupplierRefresh}
       />
 
       {/* Delete Confirmation Modal */}
@@ -698,6 +729,8 @@ export default function SuppliersPage() {
         entityType="supplier"
         entityName={supplierToDelete?.name}
         loading={isDeleting}
+        title="Delete Supplier"
+        message={`Are you sure you want to delete this supplier? This action cannot be undone.`}
       />
 
       {/* Deactivate/Activate Confirmation Modal */}

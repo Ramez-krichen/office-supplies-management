@@ -4,7 +4,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/src/__mocks__/prisma.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/src/**/*.(test|spec).{js,jsx,ts,tsx}'
@@ -18,14 +18,30 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
     '!src/**/__mocks__/**',
+    '!src/**/types/**',
+    '!src/data/**'
   ],
+  coverageReporters: ['text', 'lcov', 'clover'],
+  coverageDirectory: 'coverage',
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
-    '<rootDir>/.yoyo/'
+    '<rootDir>/scripts/',
+    '<rootDir>/prisma/'
   ],
   transformIgnorePatterns: [
     '/node_modules/',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
+  // Performance optimizations
+  maxWorkers: '50%',
+  testTimeout: 10000,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+  // Verbose output for better debugging
+  verbose: true,
+  // Error handling
+  bail: false,
+  errorOnDeprecated: true
 };

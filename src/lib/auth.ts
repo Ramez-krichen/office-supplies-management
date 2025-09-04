@@ -26,14 +26,24 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          // Check if database is available
+          if (!db) {
+            console.error('Database not available')
+            throw new Error('Database connection not available')
+          }
+
           // Check database connection first
           try {
             await db.$queryRaw`SELECT 1`;
             console.log('Database connection successful');
           } catch (dbError) {
             console.error('Database connection error:', dbError);
-            // Return null instead of throwing an error to allow for graceful failure
-            return null;
+            // For mock client, this might fail, so let's handle it gracefully
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Using mock database for development');
+            } else {
+              return null;
+            }
           }
 
           // Find user
@@ -43,6 +53,37 @@ export const authOptions: NextAuthOptions = {
               email: credentials.email
             }
           })
+
+          // Handle development mode with mock database
+          if (!user && process.env.NODE_ENV === 'development' && credentials.email === 'admin@example.com') {
+            console.log('Using development mock user');
+            // Create a mock admin user for development
+            const mockUser = {
+              id: 'dev-admin-id',
+              email: 'admin@example.com',
+              name: 'Development Admin',
+              role: 'ADMIN',
+              department: 'IT',
+              status: 'ACTIVE',
+              password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPGTpl7Bgw.yy' // 'password'
+            };
+            
+            // Verify mock password (should be 'password')
+            const isPasswordValid = await bcrypt.compare(credentials.password, mockUser.password);
+            
+            if (isPasswordValid) {
+              return {
+                id: mockUser.id,
+                email: mockUser.email,
+                name: mockUser.name,
+                role: mockUser.role,
+                department: mockUser.department,
+                lastSignIn: new Date(),
+              };
+            } else {
+              return null;
+            }
+          }
 
           if (!user) {
             console.log('User not found:', credentials.email)
@@ -134,7 +175,7 @@ export const authOptions: NextAuthOptions = {
         // Guard against undefined session/user to avoid runtime errors that cause HTML responses
         if (token && session && session.user) {
           // Validate that the user still exists in the database
-          if (token.id) {
+          if (token.id && db) {
             try {
               const userExists = await db.user.findUnique({
                 where: { id: token.id as string },

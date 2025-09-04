@@ -18,7 +18,6 @@ type SignInForm = z.infer<typeof signInSchema>
 export default function SignInPage() {
   const router = useRouter()
   const { login, isLoading, error } = useAuth()
-  const [debugMode, setDebugMode] = useState(false)
   const [sessionStatus, setSessionStatus] = useState<string>('Checking...')
 
   const {
@@ -36,12 +35,10 @@ export default function SignInPage() {
         const session = await getSession()
         if (session) {
           setSessionStatus(`Active session found for: ${session.user?.email}`)
-          console.log('Active session found:', session)
         } else {
           setSessionStatus('No active session')
         }
       } catch (error) {
-        console.error('Error checking session:', error)
         setSessionStatus('Error checking session')
       }
     }
@@ -121,28 +118,6 @@ export default function SignInPage() {
               Demo credentials: admin@example.com / admin123
             </p>
           </div>
-          
-          {/* Debug toggle */}
-          <div className="mt-4 text-center">
-            <button 
-              type="button"
-              onClick={() => setDebugMode(!debugMode)}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              {debugMode ? 'Hide Debug Info' : 'Show Debug Info'}
-            </button>
-          </div>
-          
-          {/* Debug information */}
-          {debugMode && (
-            <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-700 font-mono">
-              <div><strong>Session Status:</strong> {sessionStatus}</div>
-              <div><strong>NextAuth URL:</strong> {process.env.NEXT_PUBLIC_NEXTAUTH_URL || 'Not set'}</div>
-              <div><strong>App URL:</strong> {window.location.origin}</div>
-              <div><strong>Current URL:</strong> {window.location.href}</div>
-              <div><strong>Browser:</strong> {navigator.userAgent}</div>
-            </div>
-          )}
         </form>
       </div>
     </div>

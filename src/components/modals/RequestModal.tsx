@@ -239,12 +239,8 @@ export function RequestModal({ isOpen, onClose, onSave, request, mode, readOnly 
         items: validatedItems
       }
 
-      console.log('Submitting request data:', requestData) // Debug log
-      console.log('Session user:', session.user) // Debug log
-
       // If in edit mode, use the API directly
       if (mode === 'edit' && request?.id) {
-        console.log('Making PUT request to:', `/api/requests/${request.id}`)
 
         const response = await fetch(`/api/requests/${request.id}`, {
           method: 'PUT',
@@ -255,21 +251,15 @@ export function RequestModal({ isOpen, onClose, onSave, request, mode, readOnly 
           credentials: 'include', // Ensure cookies are sent
         })
 
-        console.log('PUT response status:', response.status)
-
         if (!response.ok) {
           const errorData = await response.json()
-          console.error('Edit request error:', errorData) // Debug log
           throw new Error(errorData.error || `Failed to update request (${response.status})`)
         }
 
         const result = await response.json()
-        console.log('PUT response data:', result)
 
         toast.success('Request updated successfully')
       } else if (mode === 'add') {
-        console.log('Making POST request to: /api/requests')
-
         const response = await fetch('/api/requests', {
           method: 'POST',
           headers: {

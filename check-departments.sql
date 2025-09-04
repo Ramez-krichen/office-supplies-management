@@ -1,0 +1,1 @@
+SELECT id, code, name, status FROM departments ORDER BY name;

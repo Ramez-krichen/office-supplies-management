@@ -49,7 +49,7 @@ async function generate2025Data() {
       for (let i = 0; i < requestCount; i++) {
         const randomUser = users[Math.floor(Math.random() * users.length)]
         const randomDay = Math.floor(Math.random() * monthInfo.days) + 1
-        const requestDate = new Date(2025, monthInfo.month, randomDay, 
+        const requestDate = new Date(2025, monthInfo.month, randomDay,
           Math.floor(Math.random() * 24), Math.floor(Math.random() * 60))
 
         // Create request
@@ -68,7 +68,7 @@ async function generate2025Data() {
 
         // Add 1-5 items to each request (ensure unique items per request)
         const itemCount = Math.floor(Math.random() * 5) + 1
-        const usedItems = new Set<string>()
+        const usedItems = new Set<string> ()
 
         for (let j = 0; j < itemCount; j++) {
           let randomItem

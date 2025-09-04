@@ -2,16 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/modal'
+import { UserActivityModal } from '@/components/modals/UserActivityModal'
 import { 
   Users, 
-  UserX, 
-  UserCheck, 
   BarChart3, 
-  TrendingUp,
-  Calendar,
-  Building,
-  Clock,
-  DollarSign,
   Package,
   AlertCircle
 } from 'lucide-react'
@@ -26,6 +20,8 @@ interface MetricModalProps {
 export function SystemMetricModal({ isOpen, onClose, metricType, metricTitle }: MetricModalProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen && metricType) {
@@ -126,7 +122,12 @@ export function SystemMetricModal({ isOpen, onClose, metricType, metricTitle }: 
         <div className="max-h-96 overflow-y-auto">
           <div className="space-y-2">
             {users.map((user: any) => (
-              <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div 
+                key={user.id} 
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200"
+                onClick={() => handleUserClick(user)}
+                title="Click to view user activity"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0">
                     <Users className="h-5 w-5 text-gray-400" />
@@ -374,14 +375,37 @@ export function SystemMetricModal({ isOpen, onClose, metricType, metricTitle }: 
     }
   }
 
+  const handleUserClick = (user: any) => {
+    setSelectedUser(user)
+    setIsActivityModalOpen(true)
+  }
+
+  const handleActivityModalClose = () => {
+    setIsActivityModalOpen(false)
+    setSelectedUser(null)
+  }
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={metricTitle}
-      size="xl"
-    >
-      {renderContent()}
-    </Modal>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={metricTitle}
+        size="xl"
+      >
+        {renderContent()}
+      </Modal>
+      
+      {selectedUser && (
+        <UserActivityModal
+          isOpen={isActivityModalOpen}
+          onClose={handleActivityModalClose}
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+          userEmail={selectedUser.email}
+          lastSignIn={selectedUser.lastSignIn}
+        />
+      )}
+    </>
   )
 }

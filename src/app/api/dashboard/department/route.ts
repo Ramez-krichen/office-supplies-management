@@ -44,8 +44,7 @@ export async function GET(request: Request) {
       }
     })
 
-    // If no formal department exists, we'll work with the department string directly
-    // This handles legacy data where users have department strings but no Department records
+    // If no formal department exists, try to find by partial matches
     let departmentId: string | null = null
     let departmentName: string = targetDepartment
     
@@ -53,15 +52,49 @@ export async function GET(request: Request) {
       departmentId = department.id
       departmentName = department.name
     } else {
-      // Check if there are users with this department string
-      const usersWithDepartment = await prisma.user.count({
-        where: {
-          department: targetDepartment
-        }
-      })
+      // Try to find department by code mapping
+      const codeMapping: Record<string, string> = {
+        'IT': 'Information Technology',
+        'HR': 'Human Resources', 
+        'FINANCE': 'Finance',
+        'FIN': 'Finance',
+        'OPS': 'Operations',
+        'MKT': 'Marketing',
+        'SALES': 'Sales',
+        'LEGAL': 'Legal',
+        'PROC': 'Procurement'
+      }
       
-      if (usersWithDepartment === 0) {
-        return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+      const mappedName = codeMapping[targetDepartment.toUpperCase()]
+      if (mappedName) {
+        const mappedDepartment = await prisma.department.findFirst({
+          where: { name: mappedName }
+        })
+        if (mappedDepartment) {
+          departmentId = mappedDepartment.id
+          departmentName = mappedDepartment.name
+        }
+      }
+      
+      // If still no department, check if there are users with this department string
+      if (!departmentId) {
+        const usersWithDepartment = await prisma.user.count({
+          where: {
+            OR: [
+              { department: targetDepartment },
+              { department: mappedName }
+            ]
+          }
+        })
+        
+        if (usersWithDepartment === 0) {
+          return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+        }
+        
+        // Use the mapped name if available
+        if (mappedName) {
+          departmentName = mappedName
+        }
       }
     }
 
@@ -86,7 +119,10 @@ export async function GET(request: Request) {
       prisma.request.count({
         where: departmentId ? 
           { requester: { departmentId } } : 
-          { requester: { department: targetDepartment } }
+          { OR: [
+            { requester: { department: targetDepartment } },
+            { requester: { department: departmentName } }
+          ]}
       }),
       prisma.request.count({
         where: {
@@ -117,7 +153,10 @@ export async function GET(request: Request) {
       prisma.user.findMany({
         where: departmentId ? 
           { departmentId } : 
-          { department: targetDepartment },
+          { OR: [
+            { department: targetDepartment },
+            { department: departmentName }
+          ]},
         select: {
           id: true,
           name: true,
@@ -365,11 +404,68 @@ export async function GET(request: Request) {
       itemCount: request.items.length
     }))
 
+    // Generate monthly spending breakdown for department (last 6 months)
+    const monthlyBreakdown = []
+    const now = new Date()
+    
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+      
+      // Get requests for this month for the department
+      const monthRequestsWhere: any = {
+        createdAt: { gte: monthStart, lte: monthEnd },
+        status: { in: ['APPROVED', 'COMPLETED'] }
+      }
+      
+      if (departmentId) {
+        monthRequestsWhere.requester = { departmentId }
+      } else {
+        monthRequestsWhere.requester = { department: targetDepartment }
+      }
+      
+      const monthRequests = await prisma.request.aggregate({
+        where: monthRequestsWhere,
+        _sum: { totalAmount: true },
+        _count: true
+      })
+      
+      // Get purchase orders for this month for the department
+      const monthPOsWhere: any = {
+        createdAt: { gte: monthStart, lte: monthEnd },
+        status: { in: ['SENT', 'CONFIRMED', 'RECEIVED'] }
+      }
+      
+      if (departmentId) {
+        monthPOsWhere.createdBy = { departmentId }
+      } else {
+        monthPOsWhere.createdBy = { department: targetDepartment }
+      }
+      
+      const monthPOs = await prisma.purchaseOrder.aggregate({
+        where: monthPOsWhere,
+        _sum: { totalAmount: true },
+        _count: true
+      })
+      
+      const monthTotal = (monthRequests._sum.totalAmount || 0) + (monthPOs._sum.totalAmount || 0)
+      const monthName = monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      
+      monthlyBreakdown.push({
+        month: monthName,
+        amount: monthTotal,
+        requests: monthRequests._count,
+        purchaseOrders: monthPOs._count,
+        formattedAmount: monthTotal > 1000 ? `$${(monthTotal / 1000).toFixed(1)}k` : `$${monthTotal.toFixed(0)}`
+      })
+    }
+
     return NextResponse.json({
       stats,
       recentRequests: formattedRecentRequests,
       departmentUsers,
       topRequesters: topRequesterDetails,
+      monthlyBreakdown,
       departmentInfo: {
         name: departmentName,
         totalSpending,

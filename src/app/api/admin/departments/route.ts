@@ -63,26 +63,18 @@ export async function GET() {
           }
         })
 
-        // Get current month spending
+        // Get current month spending - using aggregate for consistency
         const now = new Date()
         const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
         
-        const monthlyRequests = await prisma.request.findMany({
+        const monthlyRequests = await prisma.request.aggregate({
           where: {
             status: { in: ['APPROVED', 'COMPLETED'] },
             createdAt: { gte: currentMonth },
             requester: { departmentId: dept.id }
           },
-          include: {
-            items: { include: { item: true } }
-          }
+          _sum: { totalAmount: true }
         })
-
-        const monthlyRequestSpending = monthlyRequests.reduce((total, request) => {
-          return total + request.items.reduce((itemTotal, requestItem) => {
-            return itemTotal + (requestItem.totalPrice || (requestItem.item.price * requestItem.quantity))
-          }, 0)
-        }, 0)
 
         const monthlyPOSpending = await prisma.purchaseOrder.aggregate({
           where: {
@@ -93,8 +85,9 @@ export async function GET() {
           _sum: { totalAmount: true }
         })
 
+        const monthlyRequestSpending = monthlyRequests._sum.totalAmount || 0
         const monthlySpending = monthlyRequestSpending + (monthlyPOSpending._sum.totalAmount || 0)
-        const budgetUtilization = dept.budget ? (monthlySpending / dept.budget) * 100 : 0
+        const budgetUtilization = dept.budget && dept.budget > 0 ? (monthlySpending / dept.budget) * 100 : 0
 
         return {
           ...dept,

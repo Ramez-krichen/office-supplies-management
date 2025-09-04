@@ -37,9 +37,10 @@ interface SupplierModalProps {
   title: string
   categories?: Array<{ id: string; name: string }>
   onCategoryDetection?: (supplierId: string, detectedCategories: string[]) => void
+  onSupplierRefresh?: (supplierId: string) => void
 }
 
-export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, title, categories = [], onCategoryDetection }: SupplierModalProps) {
+export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, title, categories = [], onCategoryDetection, onSupplierRefresh }: SupplierModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     contactPerson: '',
@@ -67,6 +68,27 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
 
   useEffect(() => {
     if (initialData && (mode === 'edit' || mode === 'view')) {
+      // Ensure categories is always an array
+      let categories = []
+      if (initialData.categories) {
+        if (Array.isArray(initialData.categories)) {
+          categories = initialData.categories
+        } else if (typeof initialData.categories === 'string') {
+          // Handle case where categories might be a JSON string
+          try {
+            const parsed = JSON.parse(initialData.categories)
+            if (Array.isArray(parsed)) {
+              categories = parsed
+            } else if (parsed.categories && Array.isArray(parsed.categories)) {
+              categories = parsed.categories
+            }
+          } catch (e) {
+            console.warn('Could not parse categories:', initialData.categories)
+            categories = []
+          }
+        }
+      }
+      
       setFormData({
         name: initialData.name || '',
         contactPerson: initialData.contactPerson || '',
@@ -77,7 +99,7 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
         website: initialData.website || '',
         taxId: initialData.taxId || '',
         paymentTerms: initialData.paymentTerms || '',
-        categories: initialData.categories || [],
+        categories: categories,
         status: initialData.status || 'Active',
         notes: initialData.notes || ''
       })
@@ -167,6 +189,8 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
     setCategoryDetectionResult(null)
 
     try {
+      console.log('Starting category detection for supplier:', initialData.id)
+      
       const response = await fetch(`/api/suppliers/${initialData.id}/detect-categories`, {
         method: 'POST',
         headers: {
@@ -175,11 +199,13 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
       })
 
       const result = await response.json()
+      console.log('Detection API response:', result)
 
       if (response.ok) {
         setCategoryDetectionResult(result)
         
         if (result.success && result.categories) {
+          console.log('Setting categories in form data:', result.categories)
           setFormData(prev => ({
             ...prev,
             categories: result.categories
@@ -189,8 +215,18 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
           if (onCategoryDetection && initialData?.id) {
             onCategoryDetection(initialData.id, result.categories)
           }
+          
+          // Trigger supplier refresh to get updated data from the server
+          if (onSupplierRefresh && initialData?.id) {
+            setTimeout(() => {
+              onSupplierRefresh(initialData.id)
+            }, 500) // Small delay to ensure database update is complete
+          }
+        } else {
+          console.warn('Detection succeeded but no categories found:', result)
         }
       } else {
+        console.error('Detection API error:', result)
         setCategoryDetectionResult({
           success: false,
           message: result.error || 'Failed to detect categories',
@@ -368,7 +404,21 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData, mode, titl
                   </span>
                 ))}
                 {formData.categories.length === 0 && (
-                  <p className="text-gray-500">No categories specified</p>
+                  <div className="space-y-2">
+                    <p className="text-gray-500">No categories specified</p>
+                    {mode === 'view' && initialData?.id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Try to re-run detection in view mode
+                          handleDetectCategories()
+                        }}
+                        className="text-blue-600 hover:text-blue-800 text-sm underline"
+                      >
+                        Run category detection now
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
