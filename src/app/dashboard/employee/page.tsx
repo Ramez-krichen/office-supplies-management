@@ -153,7 +153,7 @@ export default function EmployeeDashboardPage() {
               Personal Dashboard
             </h1>
             <p className="text-gray-600">
-              Welcome back, {userInfo.name}! Here's your personal activity overview.
+              Welcome back, {userInfo.name}! Here&apos;s your personal activity overview.
             </p>
             <p className="text-sm text-gray-500">
               {userInfo.department} Department • {userInfo.role}
@@ -288,7 +288,7 @@ export default function EmployeeDashboardPage() {
                   <div className="text-center py-6">
                     <Bell className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications</h3>
-                    <p className="mt-1 text-sm text-gray-500">You're all caught up!</p>
+                    <p className="mt-1 text-sm text-gray-500">You&apos;re all caught up!</p>
                   </div>
                 )}
               </div>

@@ -4,13 +4,11 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import Link from 'next/link'
 import {
   Users,
-  ShoppingCart,
   Package,
   TrendingUp,
   CheckCircle,
   XCircle,
   Clock,
-  DollarSign,
   AlertTriangle,
   BarChart3
 } from 'lucide-react'
@@ -18,7 +16,6 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { safeFetch, safeJsonParse } from '@/lib/api-utils'
@@ -86,8 +83,6 @@ export default function ManagerDashboardPage() {
   const { data: session, status } = useSession()
   const [dashboardData, setDashboardData] = useState<ManagerDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [approving, setApproving] = useState<string | null>(null)
 
   // Access control check
   useEffect(() => {
@@ -126,8 +121,6 @@ export default function ManagerDashboardPage() {
     }
 
     try {
-      setApproving(requestId)
-      
       console.log('🔐 Checking session status...')
       const sessionResponse = await fetch('/api/auth/session')
       console.log(`📡 Session check status: ${sessionResponse.status}`)
@@ -170,8 +163,6 @@ export default function ManagerDashboardPage() {
     } catch (error) {
       console.error('❌ Error approving request:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to process request')
-    } finally {
-      setApproving(null)
     }
   }
 
@@ -185,11 +176,11 @@ export default function ManagerDashboardPage() {
     )
   }
 
-  if (error || !dashboardData) {
+  if (!dashboardData) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-red-600">Error: {error || 'Failed to load data'}</div>
+          <div className="text-lg text-red-600">Failed to load dashboard data</div>
         </div>
       </DashboardLayout>
     )
@@ -217,13 +208,13 @@ export default function ManagerDashboardPage() {
   const getPriorityColor = (priority: string) => {
     switch (priority.toUpperCase()) {
       case 'HIGH':
-        return 'text-red-600'
+        return 'bg-red-100 text-red-800'
       case 'MEDIUM':
-        return 'text-yellow-600'
+        return 'bg-yellow-100 text-yellow-800'
       case 'LOW':
-        return 'text-green-600'
+        return 'bg-green-100 text-green-800'
       default:
-        return 'text-gray-600'
+        return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -309,9 +300,9 @@ export default function ManagerDashboardPage() {
                             </p>
                           </div>
                           <div className="text-xs">
-                            <Badge className={getPriorityColor(request.priority)}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(request.priority)}`}>
                               {request.priority}
-                            </Badge>
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
@@ -321,7 +312,7 @@ export default function ManagerDashboardPage() {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleApproveRequest(request.id, true)}
-                              className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                              className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Approve
@@ -335,7 +326,7 @@ export default function ManagerDashboardPage() {
                                   toast.error('A reason is required for rejection.')
                                 }
                               }}
-                              className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                              className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
                             >
                               <XCircle className="h-3 w-3 mr-1" />
                               Reject

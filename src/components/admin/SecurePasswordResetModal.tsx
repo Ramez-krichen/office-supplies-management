@@ -128,7 +128,11 @@ export default function SecurePasswordResetModal({
           <div className="space-y-1 text-sm">
             <p><strong>Name:</strong> {user.name || 'N/A'}</p>
             <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Role:</strong> <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{user.role}</span></p>
+            <p><strong>Role:</strong> <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {user.role === 'ADMIN' ? 'Administrator' : 
+               user.role === 'GENERAL_MANAGER' ? 'General Manager' :
+               user.role === 'MANAGER' ? 'Manager' : 'Employee'}
+            </span></p>
             <p><strong>Department:</strong> {user.department || 'N/A'}</p>
             <p><strong>Status:</strong> <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{user.status}</span></p>
           </div>

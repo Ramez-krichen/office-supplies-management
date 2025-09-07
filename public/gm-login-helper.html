@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Manager Login Helper</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .error-box {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .solution-box {
+            background: #efe;
+            border: 1px solid #cfc;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .credentials-box {
+            background: #f0f8ff;
+            border: 2px solid #4169e1;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 4px solid #4169e1;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4169e1;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #3158d0;
+        }
+        .warning {
+            color: #d63384;
+            font-weight: bold;
+        }
+        .success {
+            color: #198754;
+            font-weight: bold;
+        }
+        .info {
+            color: #0dcaf0;
+            font-weight: bold;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 General Manager Access Helper</h1>
+            <p>Solving the 403 Forbidden Error for Requests Dashboard</p>
+        </div>
+
+        <div class="error-box">
+            <h3>❌ Current Error</h3>
+            <p><strong>Error:</strong> <code>Error fetching request stats: 403 "Forbidden"</code></p>
+            <p><strong>Location:</strong> <code>/dashboard/requests</code></p>
+            <p><strong>Cause:</strong> User is not logged in as a General Manager</p>
+        </div>
+
+        <div class="solution-box">
+            <h3>✅ Root Cause</h3>
+            <p>The requests dashboard is <strong>restricted to GENERAL_MANAGER role only</strong>. This is by design for security and segregation of duties.</p>
+            <ul>
+                <li>Only General Managers can view and approve all requests</li>
+                <li>Other roles (Admin, Manager, Employee) have different dashboards</li>
+                <li>This ensures proper authorization workflow</li>
+            </ul>
+        </div>
+
+        <div class="credentials-box">
+            <h3>🎯 General Manager Credentials</h3>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; text-align: left; max-width: 400px; margin: 0 auto;">
+                <strong>Email:</strong> <code>gm@company.com</code>
+                <strong>Passwords to try:</strong> <div>
+                    <code>password123</code> (most likely)<br>
+                    <code>GeneralManager123!</code><br>
+                    <code>admin</code><br>
+                    <code>gm123</code>
+                </div>
+                <strong>Role:</strong> <code>GENERAL_MANAGER</code>
+                <strong>Department:</strong> <code>Executive</code>
+            </div>
+        </div>
+
+        <h3>📋 Step-by-Step Solution</h3>
+        
+        <div class="step">
+            <strong>Step 1:</strong> Log out of current session
+            <p>Visit <a href="/auth/signout" target="_blank">/auth/signout</a> to log out</p>
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Log in as General Manager
+            <p>Visit <a href="/auth/signin" target="_blank">/auth/signin</a> and use the credentials above</p>
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Access the requests dashboard
+            <p>Navigate to <a href="/dashboard/requests" target="_blank">/dashboard/requests</a></p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="/auth/signout" class="btn">🚪 Sign Out Current User</a>
+            <a href="/auth/signin" class="btn">🔑 Sign In as General Manager</a>
+            <a href="/dashboard/requests" class="btn">📊 Go to Requests Dashboard</a>
+        </div>
+
+        <div class="solution-box">
+            <h3>🔒 Access Control Summary</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 8px; border: 1px solid #dee2e6;">Role</th>
+                    <th style="padding: 8px; border: 1px solid #dee2e6;">Requests Dashboard Access</th>
+                    <th style="padding: 8px; border: 1px solid #dee2e6;">Alternative Dashboard</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><code>ADMIN</code></td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;" class="warning">❌ No Access</td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><a href="/dashboard/admin">/dashboard/admin</a></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><code>MANAGER</code></td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;" class="warning">❌ No Access</td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><a href="/dashboard/manager">/dashboard/manager</a></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><code>EMPLOYEE</code></td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;" class="warning">❌ No Access</td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><a href="/dashboard/employee">/dashboard/employee</a></td>
+                </tr>
+                <tr style="background: #d4edda;">
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><strong><code>GENERAL_MANAGER</code></strong></td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;" class="success">✅ Full Access</td>
+                    <td style="padding: 8px; border: 1px solid #dee2e6;"><strong><a href="/dashboard/requests">/dashboard/requests</a></strong></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="error-box">
+            <h3>⚠️ Important Notes</h3>
+            <ul>
+                <li><strong>Role-Based Design:</strong> This restriction is intentional for security</li>
+                <li><strong>Segregation of Duties:</strong> General Managers only approve/reject, cannot create requests</li>
+                <li><strong>No Workaround:</strong> You must log in as General Manager to access this dashboard</li>
+                <li><strong>Test Environment:</strong> These are test credentials for development only</li>
+            </ul>
+        </div>
+
+        <script>
+            // Auto-check current session
+            fetch('/api/auth/session')
+                .then(res => res.json())
+                .then(session => {
+                    if (session.user) {
+                        const roleBox = document.createElement('div');
+                        roleBox.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 4px;';
+                        
+                        let message = `<h4>🔍 Current Session</h4>`;
+                        message += `<p><strong>Logged in as:</strong> ${session.user.email} (${session.user.role})</p>`;
+                        
+                        if (session.user.role === 'GENERAL_MANAGER') {
+                            message += `<p class="success">✅ Perfect! You have the correct role for requests dashboard.</p>`;
+                            message += `<p><a href="/dashboard/requests" class="btn">Go to Requests Dashboard</a></p>`;
+                        } else {
+                            message += `<p class="warning">❌ Wrong role. You need to log in as GENERAL_MANAGER.</p>`;
+                            message += `<p><a href="/auth/signout" class="btn">Sign Out & Login as GM</a></p>`;
+                        }
+                        
+                        roleBox.innerHTML = message;
+                        document.querySelector('.container').insertBefore(roleBox, document.querySelector('.step').parentNode);
+                    }
+                })
+                .catch(err => {
+                    console.log('Not logged in or session check failed');
+                });
+        </script>
+    </div>
+</body>
+</html>

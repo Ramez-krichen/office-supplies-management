@@ -142,11 +142,14 @@ export function SystemMetricModal({ isOpen, onClose, metricType, metricTitle }: 
                 </div>
                 <div className="text-right">
                   <div className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                    user.role === 'ADMIN' ? 'bg-yellow-100 text-yellow-800' :
+                    user.role === 'GENERAL_MANAGER' ? 'bg-purple-100 text-purple-800' :
                     user.role === 'MANAGER' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
-                    {user.role}
+                    {user.role === 'ADMIN' ? 'Administrator' : 
+                     user.role === 'GENERAL_MANAGER' ? 'General Manager' :
+                     user.role === 'MANAGER' ? 'Manager' : 'Employee'}
                   </div>
                   {user.lastSignIn && (
                     <div className="text-xs text-gray-500 mt-1">

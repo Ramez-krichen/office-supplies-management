@@ -92,7 +92,7 @@ export async function POST() {
             departmentId: dept.id,
             departmentName: dept.name,
             departmentCode: dept.code,
-RR scenario: 'MULTIPLE_MANAGERS',
+            scenario: 'MULTIPLE_MANAGERS',
             availableManagers: dept.users,
             currentManagerId: dept.managerId,
             currentManagerName: dept.manager?.name || null

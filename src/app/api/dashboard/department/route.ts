@@ -406,14 +406,17 @@ export async function GET(request: Request) {
 
     // Generate monthly spending breakdown for department (last 6 months)
     const monthlyBreakdown = []
-    const now = new Date()
     
     for (let i = 5; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
       
       // Get requests for this month for the department
-      const monthRequestsWhere: any = {
+      const monthRequestsWhere: {
+        createdAt: { gte: Date; lte: Date };
+        status: { in: string[] };
+        requester?: { departmentId?: string; department?: string };
+      } = {
         createdAt: { gte: monthStart, lte: monthEnd },
         status: { in: ['APPROVED', 'COMPLETED'] }
       }
@@ -431,7 +434,11 @@ export async function GET(request: Request) {
       })
       
       // Get purchase orders for this month for the department
-      const monthPOsWhere: any = {
+      const monthPOsWhere: {
+        createdAt: { gte: Date; lte: Date };
+        status: { in: string[] };
+        createdBy?: { departmentId?: string; department?: string };
+      } = {
         createdAt: { gte: monthStart, lte: monthEnd },
         status: { in: ['SENT', 'CONFIRMED', 'RECEIVED'] }
       }

@@ -48,6 +48,7 @@ const getRoleIcon = (role: string) => {
 const getRoleColor = (role: string) => {
   switch (role) {
     case 'ADMIN': return 'bg-yellow-100 text-yellow-800'
+    case 'GENERAL_MANAGER': return 'bg-purple-100 text-purple-800'
     case 'MANAGER': return 'bg-blue-100 text-blue-800'
     case 'EMPLOYEE': return 'bg-gray-100 text-gray-800'
     default: return 'bg-gray-100 text-gray-800'
@@ -381,7 +382,9 @@ export default function AdminUsersPage() {
                       <div className="flex items-center">
                         {getRoleIcon(user.role)}
                         <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                          {user.role}
+                          {user.role === 'ADMIN' ? 'Administrator' : 
+                           user.role === 'GENERAL_MANAGER' ? 'General Manager' :
+                           user.role === 'MANAGER' ? 'Manager' : 'Employee'}
                         </span>
                       </div>
                     </td>
@@ -490,7 +493,11 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Role</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedUser.role}</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {selectedUser.role === 'ADMIN' ? 'Administrator' : 
+                     selectedUser.role === 'GENERAL_MANAGER' ? 'General Manager' :
+                     selectedUser.role === 'MANAGER' ? 'Manager' : 'Employee'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Department</label>

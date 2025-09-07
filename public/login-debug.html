@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test - General Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .error { background-color: #fee; border-color: #fcc; color: #c33; }
+        .success { background-color: #efe; border-color: #cfc; color: #3c3; }
+        .info { background-color: #eef; border-color: #ccf; color: #33c; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background-color: #007cba; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #005a8a; }
+    </style>
+</head>
+<body>
+    <h1>🔐 General Manager Login Test</h1>
+    
+    <div class="card error">
+        <h3>❌ Current Issue</h3>
+        <p><strong>Error:</strong> 403 Forbidden when accessing requests dashboard</p>
+        <p><strong>Cause:</strong> User is not logged in as GENERAL_MANAGER</p>
+    </div>
+
+    <div class="card info">
+        <h3>🎯 General Manager Credentials</h3>
+        <p><strong>Email:</strong> gm@company.com</p>
+        <p><strong>Password:</strong> GeneralManager123!</p>
+        <p><strong>Role:</strong> GENERAL_MANAGER</p>
+        <p><strong>Department:</strong> Executive</p>
+    </div>
+
+    <div class="card">
+        <h3>🚀 Quick Login Form</h3>
+        <form id="loginForm">
+            <input type="email" id="email" value="gm@company.com" placeholder="Email" required>
+            <input type="password" id="password" value="GeneralManager123!" placeholder="Password" required>
+            <button type="submit">Login as General Manager</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>🔍 Current Session Debug</h3>
+        <button onclick="checkSession()">Check Current Session</button>
+        <div id="sessionInfo"></div>
+    </div>
+
+    <div class="card">
+        <h3>📋 Next Steps</h3>
+        <ol>
+            <li>Use the login form above OR go to <a href="/auth/signin">/auth/signin</a></li>
+            <li>Login with the General Manager credentials</li>
+            <li>Navigate to <a href="/dashboard/requests">/dashboard/requests</a></li>
+            <li>The 403 error should be resolved</li>
+        </ol>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // This would need to be adapted to your actual auth system
+                alert('Please use the actual login page at /auth/signin with these credentials');
+                window.location.href = '/auth/signin';
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Error: Please use the actual login page at /auth/signin');
+            }
+        });
+
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/debug/session');
+                const data = await response.json();
+                
+                const sessionDiv = document.getElementById('sessionInfo');
+                if (data.authenticated) {
+                    sessionDiv.innerHTML = `
+                        <div style="background: #efe; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                            <strong>✅ Authenticated as:</strong><br>
+                            Name: ${data.user.name}<br>
+                            Email: ${data.user.email}<br>
+                            Role: ${data.user.role}<br>
+                            Department: ${data.user.department || 'N/A'}
+                            ${data.user.role === 'GENERAL_MANAGER' ? 
+                                '<br><strong style="color: green;">✅ Correct role for requests dashboard!</strong>' : 
+                                '<br><strong style="color: red;">❌ Wrong role - need GENERAL_MANAGER</strong>'
+                            }
+                        </div>
+                    `;
+                } else {
+                    sessionDiv.innerHTML = `
+                        <div style="background: #fee; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                            <strong>❌ Not authenticated</strong><br>
+                            Please login first.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Session check error:', error);
+                document.getElementById('sessionInfo').innerHTML = `
+                    <div style="background: #fee; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                        <strong>❌ Error checking session</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-check session on page load
+        window.addEventListener('load', checkSession);
+    </script>
+</body>
+</html>

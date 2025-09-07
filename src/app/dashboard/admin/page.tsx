@@ -593,7 +593,7 @@ export default function AdminDashboardPage() {
                     <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.department} • {user.role}</p>
+                        <p className="text-xs text-gray-500">{user.department} • {user.role === 'ADMIN' ? 'Administrator' : user.role === 'GENERAL_MANAGER' ? 'General Manager' : user.role === 'MANAGER' ? 'Manager' : 'Employee'}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">

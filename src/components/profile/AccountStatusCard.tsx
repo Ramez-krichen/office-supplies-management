@@ -25,11 +25,13 @@ export function AccountStatusCard({ profile }: AccountStatusCardProps) {
     return profile.status === 'ACTIVE' 
       ? 'bg-green-100 text-green-800 border-green-200' 
       : 'bg-red-100 text-red-800 border-red-200'
-  }
+  }r
 
   const getRoleColor = () => {
     switch (profile.role) {
       case 'ADMIN':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'GENERAL_MANAGER':
         return 'bg-purple-100 text-purple-800 border-purple-200'
       case 'MANAGER':
         return 'bg-blue-100 text-blue-800 border-blue-200'
@@ -70,7 +72,11 @@ export function AccountStatusCard({ profile }: AccountStatusCardProps) {
             <div className="flex items-center space-x-2">
               <Shield className="h-4 w-4 text-gray-400" />
               <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full border ${getRoleColor()}`}>
-                {profile.role}
+                {profile.role === 'ADMIN' ? 'Administrator' : 
+                 profile.role === 'GENERAL_MANAGER' ? 'General Manager' :
+                 profile.role === 'MANAGER' ? 'Manager' : 
+                 profile.role === 'EMPLOYEE' ? 'Employee' : 
+                 profile.role || 'Not assigned'}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">

@@ -5,7 +5,11 @@ import { db as prisma } from '@/lib/db'
 export async function GET() {
   try {
     // Check if user has access to requests dashboard - GENERAL_MANAGER only
-    const accessCheck = await checkAccess({ requireRole: 'GENERAL_MANAGER' })
+    const accessCheck = await checkAccess({ 
+      requireRole: 'GENERAL_MANAGER',
+      feature: 'requests',
+      action: 'view'
+    })
     if (!accessCheck.hasAccess) {
       return NextResponse.json({ error: accessCheck.error }, { status: accessCheck.status })
     }

@@ -52,7 +52,6 @@ export default function ReportsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [hoveredDataPoint, setHoveredDataPoint] = useState<{ month: string; amount: number; x: number; y: number } | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -268,7 +267,7 @@ export default function ReportsPage() {
             )}
           </h3>
           <div className="mt-4">
-            <div className="h-64 relative">
+            <div className="h-48 relative">
               {/* Y-axis labels */}
               <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-gray-500">
                 {[...Array(5)].map((_, i) => {
@@ -302,59 +301,31 @@ export default function ReportsPage() {
                       }).join(' ')}
                       fill="none"
                       stroke="#4f46e5"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                     
-                    {/* Data points with hover */}
+                    {/* Clean data points without hover tooltips */}
                     {monthlyTrend.map((month, i) => {
                       const maxAmount = Math.max(...monthlyTrend.map(m => m.amount), 1)
                       const x = (i / Math.max(monthlyTrend.length - 1, 1)) * 100 * Math.max(monthlyTrend.length - 1, 1)
                       const y = 100 - ((month.amount / maxAmount) * 100)
+                      
                       return (
                         <circle
                           key={i}
                           cx={x}
                           cy={y}
-                          r="6"
-                          fill={hoveredDataPoint?.month === month.month ? "#6366f1" : "#4f46e5"}
+                          r="4"
+                          fill="#4f46e5"
                           stroke="white"
                           strokeWidth="2"
-                          className="cursor-pointer transition-all duration-200 hover:r-8"
-                          onMouseEnter={(e) => {
-                            const rect = e.currentTarget.closest('svg')?.getBoundingClientRect()
-                            if (rect) {
-                              const svgX = (x / (monthlyTrend.length * 100)) * rect.width
-                              const svgY = (y / 100) * rect.height
-                              setHoveredDataPoint({
-                                month: month.month,
-                                amount: month.amount,
-                                x: rect.left + svgX + 48, // 48px offset for left margin
-                                y: rect.top + svgY
-                              })
-                            }
+                          className="transition-all duration-200 ease-out hover:r-6"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
                           }}
-                          onMouseLeave={() => setHoveredDataPoint(null)}
                         />
-                      )
-                    })}
-                    
-                    {/* Value labels on data points */}
-                    {monthlyTrend.map((month, i) => {
-                      const maxAmount = Math.max(...monthlyTrend.map(m => m.amount), 1)
-                      const x = (i / Math.max(monthlyTrend.length - 1, 1)) * 100 * Math.max(monthlyTrend.length - 1, 1)
-                      const y = 100 - ((month.amount / maxAmount) * 100)
-                      const displayValue = month.amount > 1000 ? `$${(month.amount / 1000).toFixed(1)}k` : `$${month.amount.toFixed(0)}`
-                      return (
-                        <text
-                          key={`label-${i}`}
-                          x={x}
-                          y={y - 5}
-                          textAnchor="middle"
-                          className="text-xs fill-gray-700 font-medium"
-                          fontSize="8"
-                        >
-                          {displayValue}
-                        </text>
                       )
                     })}
                   </svg>
@@ -367,23 +338,6 @@ export default function ReportsPage() {
                   <div key={month.month}>{month.month}</div>
                 ))}
               </div>
-              
-              {/* Tooltip */}
-              {hoveredDataPoint && (
-                <div 
-                  className="absolute z-10 bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full"
-                  style={{
-                    left: hoveredDataPoint.x,
-                    top: hoveredDataPoint.y - 10
-                  }}
-                >
-                  <div className="text-sm font-medium">{hoveredDataPoint.month}</div>
-                  <div className="text-lg font-bold">${hoveredDataPoint.amount.toLocaleString()}</div>
-                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-                    <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                  </div>
-                </div>
-              )}
             </div>
             
             {/* Monthly Values Table */}

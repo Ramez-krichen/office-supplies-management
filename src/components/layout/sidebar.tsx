@@ -43,6 +43,12 @@ const getNavigationForRole = (userRole: string | undefined, userPermissions: str
   if (accessConfig.dashboards.systemDashboard) {
     dashboardItems.push({ name: 'System Dashboard', href: '/dashboard/system', icon: LayoutDashboard })
   }
+  
+  // Add Manager Dashboard for managers and admins
+  if (userRole === 'MANAGER' || userRole === 'ADMIN') {
+    dashboardItems.push({ name: 'Manager Dashboard', href: '/dashboard/manager', icon: LayoutDashboard })
+  }
+  
   if (accessConfig.dashboards.departmentDashboard) {
     dashboardItems.push({ name: 'Department Dashboard', href: '/dashboard/department', icon: LayoutDashboard })
   }

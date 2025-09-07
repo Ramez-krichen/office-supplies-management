@@ -82,12 +82,18 @@ export function PersonalInfoForm({
           <div className="flex items-center">
             <span className={`inline-flex px-3 py-2 text-sm font-medium rounded-md ${
               formData.role === 'ADMIN' 
-                ? 'bg-purple-100 text-purple-800' 
+                ? 'bg-yellow-100 text-yellow-800' 
+                : formData.role === 'GENERAL_MANAGER'
+                ? 'bg-purple-100 text-purple-800'
                 : formData.role === 'MANAGER'
                 ? 'bg-blue-100 text-blue-800'
                 : 'bg-green-100 text-green-800'
             }`}>
-              {formData.role || 'Not assigned'}
+              {formData.role === 'ADMIN' ? 'Administrator' : 
+               formData.role === 'GENERAL_MANAGER' ? 'General Manager' :
+               formData.role === 'MANAGER' ? 'Manager' : 
+               formData.role === 'EMPLOYEE' ? 'Employee' : 
+               formData.role || 'Not assigned'}
             </span>
             <span className="ml-2 text-sm text-gray-500">
               (Role cannot be changed)
