@@ -10,6 +10,7 @@ import { UserPermissionsModal } from '@/components/modals/UserPermissionsModal'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { ExportButton } from '@/components/ui/export'
+import { toast } from 'react-hot-toast'
 
 interface User {
   id: string
@@ -213,6 +214,8 @@ export default function UsersPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Delete user error:', errorData);
+        
         if (response.status === 401) {
           throw new Error('You do not have permission to delete users. Only administrators can delete user accounts.');
         } else if (response.status === 403) {
@@ -223,10 +226,11 @@ export default function UsersPage() {
       }
       setUsers(users.filter(u => u.id !== userToDelete.id));
       setUserToDelete(null);
+      toast.success('User deleted successfully');
     } catch (error) {
       console.error('Error deleting user:', error);
       // Show user-friendly error message
-      alert(error instanceof Error ? error.message : 'Failed to delete user');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete user');
     } finally {
       setIsDeleting(false);
     }
@@ -586,7 +590,9 @@ export default function UsersPage() {
         type="delete"
         entityType="user"
         entityName={userToDelete?.name}
-        isLoading={isDeleting}
+        loading={isDeleting}
+        title="Delete User"
+        message={`Are you sure you want to delete this user? This action cannot be undone.`}
       />
 
       {/* Deactivate/Activate Confirmation Modal */}
@@ -597,12 +603,12 @@ export default function UsersPage() {
         type={userToDeactivate?.status === 'ACTIVE' ? 'deactivate' : 'warning'}
         entityType="user"
         entityName={userToDeactivate?.name}
-        isLoading={isDeactivating}
-        customTitle={userToDeactivate?.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
-        customMessage={userToDeactivate?.status === 'ACTIVE'
+        loading={isDeactivating}
+        title={userToDeactivate?.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User'}
+        message={userToDeactivate?.status === 'ACTIVE'
           ? 'This user will lose access to the system.'
           : 'This user will regain access to the system.'}
-        customConfirmText={userToDeactivate?.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+        confirmText={userToDeactivate?.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
       />
 
       {/* User Permissions Modal */}

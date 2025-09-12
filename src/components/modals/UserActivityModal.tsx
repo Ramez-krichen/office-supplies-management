@@ -38,6 +38,14 @@ export function UserActivityModal({
       fetchUserActivities()
     }
   }, [isOpen, userId])
+  
+  // Add a refresh button to manually refresh activities
+  const refreshActivities = () => {
+    if (userId) {
+      fetchUserActivities()
+      toast.success('Activities refreshed')
+    }
+  }
 
   const fetchUserActivities = async () => {
     setLoading(true)
@@ -145,9 +153,17 @@ export function UserActivityModal({
 
           {/* Activities */}
           <div className="mb-4">
-            <div className="flex items-center mb-3">
-              <Activity className="w-5 h-5 text-gray-400 mr-2" />
-              <h4 className="text-md font-medium text-gray-900">Recent Activities (Last 7 Days)</h4>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <Activity className="w-5 h-5 text-gray-400 mr-2" />
+                <h4 className="text-md font-medium text-gray-900">Recent Activities (Last 7 Days)</h4>
+              </div>
+              <button
+                onClick={refreshActivities}
+                className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+              >
+                Refresh
+              </button>
             </div>
 
             {loading ? (
@@ -159,7 +175,7 @@ export function UserActivityModal({
                 <Calendar className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No recent activities</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  This user hasn't performed any tracked activities in the last 7 days.
+                  This user hasn&apos;t performed any tracked activities in the last 7 days.
                 </p>
               </div>
             ) : (

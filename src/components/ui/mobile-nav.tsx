@@ -12,7 +12,6 @@ import {
   BarChart3,
   Users,
   Settings,
-  Menu,
   X,
   ChevronRight,
   User
@@ -77,6 +76,7 @@ const getNavigationItemsForRole = (userRole: string | undefined): NavItem[] => {
     case 'MANAGER':
       // Manager gets department operations and approvals
       dashboardItems.push(
+        { name: 'Manager Dashboard', href: '/dashboard/manager', icon: LayoutDashboard },
         { name: 'Personal Dashboard', href: '/dashboard/employee', icon: LayoutDashboard },
         { name: 'Department Dashboard', href: '/dashboard/department', icon: LayoutDashboard }
       )

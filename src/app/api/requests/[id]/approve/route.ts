@@ -11,6 +11,11 @@ export async function POST(
   console.log('🚀 POST /api/requests/[id]/approve - Starting...')
 
   try {
+    // Test database connection first
+    console.log('🔌 Testing database connection...')
+    await db.$queryRaw`SELECT 1`
+    console.log('✅ Database connection verified')
+    
     console.log('🔐 Checking access...')
     const accessCheck = await checkAccess(createFeatureAccessCheck('REQUESTS', 'approve')())
     if (!accessCheck.hasAccess) {
@@ -140,20 +145,31 @@ export async function POST(
 
     // Update the approval
     console.log(`🔄 Updating approval ${currentApproval.id} with status: ${status}`)
-    await db.approval.update({
-      where: { id: currentApproval.id },
-      data: {
-        status,
-        comments: comments || null,
-        updatedAt: new Date()
-      }
-    })
-    console.log(`✅ Approval updated successfully`)
+    try {
+      await db.approval.update({
+        where: { id: currentApproval.id },
+        data: {
+          status,
+          comments: comments || null,
+          updatedAt: new Date()
+        }
+      })
+      console.log(`✅ Approval updated successfully`)
+    } catch (dbError) {
+      console.error('❌ Database error while updating approval:', dbError)
+      return NextResponse.json(
+        { error: 'Database error occurred while updating approval' },
+        { status: 500 }
+      )
+    }
 
     // Update the request status if this is the final approval or if rejected
     console.log(`🔄 Updating request status...`)
+    let newStatus = status // Initialize newStatus with the current status
+    
     if (status === 'REJECTED') {
       console.log(`❌ Rejecting request ${requestId}`)
+      newStatus = 'REJECTED' // Update newStatus for rejected requests
       await db.request.update({
         where: { id: requestId },
         data: {
@@ -212,7 +228,7 @@ export async function POST(
       }
 
       // Determine the new status based on approval progress
-      let newStatus = 'PENDING'
+      newStatus = 'PENDING'
 
       if (allLevelsApproved && levels.length > 0) {
         // All levels approved - mark as APPROVED
@@ -267,7 +283,7 @@ export async function POST(
         requestId,
         requestTitle: existingRequest.title,
         oldStatus: existingRequest.status,
-        newStatus: status === 'APPROVED' ? (newStatus || 'APPROVED') : 'REJECTED',
+        newStatus: newStatus,
         approverName: user.name || user.email,
         comments: comments || undefined,
         department: existingRequest.department || undefined,
@@ -282,20 +298,32 @@ export async function POST(
 
     const responseData = {
       success: true,
-      message: `Request ${status.toLowerCase()} successfully`
+      message: `Request ${status.toLowerCase()} successfully`,
+      requestId: requestId,
+      newStatus: newStatus
     }
 
     console.log('📤 Sending response:', responseData)
-    return NextResponse.json(responseData)
+    return NextResponse.json(responseData, { 
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
   } catch (error) {
     console.error('❌ Error approving/rejecting request:', error)
     console.error('❌ Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      cause: error?.cause
     })
 
-    const errorResponse = { error: 'Failed to process approval' }
+    // Ensure we always return a valid error response
+    const errorResponse = { 
+      error: 'Failed to process approval',
+      details: error?.message || 'Unknown error occurred'
+    }
     console.log('📤 Sending error response:', errorResponse)
     return NextResponse.json(errorResponse, { status: 500 })
   }

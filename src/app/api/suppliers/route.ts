@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
         itemsCount: supplier.items.length,
         totalOrders: supplier.purchaseOrders.length,
         lastOrderDate: supplier.purchaseOrders[0]?.orderDate.toISOString().split('T')[0] || '',
-        status: 'Active' as const,
+        status: supplier.status === 'ACTIVE' ? 'Active' : supplier.status === 'INACTIVE' ? 'Inactive' : 'Active',
         rating: 0,
         categories: categoryData.categories,
         categoryConfidence: categoryData.confidence,

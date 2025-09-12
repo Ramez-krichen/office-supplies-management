@@ -74,7 +74,8 @@ export async function PUT(
       email,
       phone,
       address,
-      contactPerson
+      contactPerson,
+      status
     } = body
     
     const { id: supplierId } = await params
@@ -114,15 +115,27 @@ export async function PUT(
     }
 
     try {
+      // Build update data object
+      const updateData: any = {
+        name,
+        email: email && email.trim() ? email.trim() : null,
+        phone: phone && phone.trim() ? phone.trim() : null,
+        address: address && address.trim() ? address.trim() : null,
+        contactPerson: contactPerson && contactPerson.trim() ? contactPerson.trim() : null
+      }
+
+      // Add status if provided (convert frontend format to database format)
+      if (status !== undefined) {
+        if (status === 'Active' || status === 'Inactive') {
+          updateData.status = status === 'Active' ? 'ACTIVE' : 'INACTIVE'
+        } else if (status === 'ACTIVE' || status === 'INACTIVE') {
+          updateData.status = status
+        }
+      }
+
       const updatedSupplier = await prisma.supplier.update({
         where: { id: supplierId },
-        data: {
-          name,
-          email: email && email.trim() ? email.trim() : null,
-          phone: phone && phone.trim() ? phone.trim() : null,
-          address: address && address.trim() ? address.trim() : null,
-          contactPerson: contactPerson && contactPerson.trim() ? contactPerson.trim() : null
-        }
+        data: updateData
       })
 
       // Create audit log with proper error handling
@@ -133,7 +146,7 @@ export async function PUT(
             entity: 'Supplier',
             entityId: updatedSupplier.id,
             performedBy: session.user.id,
-            details: `Updated supplier: ${updatedSupplier.name}`
+            details: `Updated supplier: ${updatedSupplier.name}${status ? ` (Status: ${status})` : ''}`
           }
         })
       } catch (auditError) {

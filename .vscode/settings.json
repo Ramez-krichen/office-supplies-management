@@ -1,6 +1,4 @@
 {
-    "WillLuke.nextjs.addTypesOnSave": true,
-    "WillLuke.nextjs.hasPrompted": true,
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
@@ -10,7 +8,5 @@
         "**/CVS": true,
         "**/.ruby-lsp": true,
         ".yoyo": true
-    },
-    "chatgpt.openOnStartup": false,
-    "CodeGPT.apiKey": "OpenRouter"
+    }
 }

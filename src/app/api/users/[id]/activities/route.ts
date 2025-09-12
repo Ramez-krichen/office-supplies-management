@@ -2,22 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { canAccessFeature } from '@/lib/server-access-control'
+import { canAccessFeature } from '@/lib/access-control'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Add cache control headers to prevent caching
+  const headers = new Headers()
+  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  headers.set('Pragma', 'no-cache')
+  headers.set('Expires', '0')
   try {
     const session = await getServerSession(authOptions)
     
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
     }
 
     // Check if user has permission to view user activities
     if (!canAccessFeature(session.user.role, 'auditLogs', 'view')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers })
     }
 
     const { searchParams } = new URL(request.url)
@@ -60,13 +65,13 @@ export async function GET(
         start: startDate.toISOString(),
         end: endDate.toISOString()
       }
-    })
+    }, { headers })
 
   } catch (error) {
     console.error('Error fetching user activities:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers }
     )
   }
 }

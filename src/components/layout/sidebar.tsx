@@ -44,8 +44,8 @@ const getNavigationForRole = (userRole: string | undefined, userPermissions: str
     dashboardItems.push({ name: 'System Dashboard', href: '/dashboard/system', icon: LayoutDashboard })
   }
   
-  // Add Manager Dashboard for managers and admins
-  if (userRole === 'MANAGER' || userRole === 'ADMIN') {
+  // Add Manager Dashboard only for managers
+  if (userRole === 'MANAGER') {
     dashboardItems.push({ name: 'Manager Dashboard', href: '/dashboard/manager', icon: LayoutDashboard })
   }
   

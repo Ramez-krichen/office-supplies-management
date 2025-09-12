@@ -204,6 +204,7 @@ console.log('Request body:', JSON.stringify(body, null, 2))
 const {
   title,
   description,
+  department,
   priority,
   items
 } = body
@@ -215,7 +216,7 @@ const creatorDepartment = userDepartment || (await db.user.findUnique({
 })).department
 
 // Use the creator's department if not provided in the request body
-const requestDepartment = department || creatorDepartment
+const requestDepartment = body.department || creatorDepartment || 'GENERAL'
 
 // Validate required fields
 if (!title || !requestDepartment || !items || !items.length) {

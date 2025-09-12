@@ -5,9 +5,7 @@ import {
   FileText,
   Package,
   ShoppingCart,
-  AlertTriangle,
-  TrendingUp,
-  Users
+  AlertTriangle
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -116,8 +114,8 @@ export default function DashboardPage() {
                 </Link>
               )}
 
-              {/* Manager Dashboard */}
-              {session?.user?.role && ['MANAGER', 'ADMIN'].includes(session.user.role) && (
+              {/* Manager Dashboard - Only for MANAGER role */}
+              {session?.user?.role === 'MANAGER' && (
                 <Link
                   href="/dashboard/manager"
                   className="group p-6 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:border-orange-300"

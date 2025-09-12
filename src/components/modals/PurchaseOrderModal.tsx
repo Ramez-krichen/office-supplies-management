@@ -76,6 +76,7 @@ export function PurchaseOrderModal({
         // Find supplier for preselected item
         const supplierForItem = suppliers.find(s => s.name === preselectedItem.supplier)
         
+        console.log('Preselecting item for purchase order:', preselectedItem)
         setFormData({
           supplierId: supplierForItem?.id || '',
           expectedDelivery: '',
@@ -84,7 +85,7 @@ export function PurchaseOrderModal({
             itemId: preselectedItem.id,
             itemName: preselectedItem.name,
             quantity: Math.max(preselectedItem.maxStock - preselectedItem.quantity, 1),
-            unitPrice: preselectedItem.unitPrice,
+            unitPrice: preselectedItem.unitPrice || preselectedItem.price || 0,
             unit: preselectedItem.unit
           }]
         })
@@ -148,11 +149,12 @@ export function PurchaseOrderModal({
           if (field === 'itemId') {
             const selectedItem = availableItems.find(ai => ai.id === value)
             if (selectedItem) {
+              console.log('Selected item for purchase order:', selectedItem)
               return {
                 ...item,
                 itemId: value,
                 itemName: selectedItem.name,
-                unitPrice: selectedItem.unitPrice,
+                unitPrice: selectedItem.unitPrice || selectedItem.price || 0,
                 unit: selectedItem.unit
               }
             }

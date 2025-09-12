@@ -569,6 +569,29 @@ function DepartmentDashboardContent() {
 }
 
 export default function DepartmentDashboardPage() {
+  // Force a cache refresh when the component mounts
+  useEffect(() => {
+    // Clear any cached API responses
+    if (typeof window !== 'undefined') {
+      const timestamp = new Date().getTime()
+      // Add a timestamp parameter to force fresh data
+      const refreshParam = `?_refresh=${timestamp}`
+      
+      // Only reload if coming from another page, not on browser refresh
+      const isNavigationReload = window.performance?.navigation?.type === 1
+      if (!isNavigationReload && window.sessionStorage.getItem('lastVisit')) {
+        // Fetch fresh data for the activities
+        fetch(`/api/refresh-cache${refreshParam}`, { 
+          method: 'HEAD',
+          headers: { 'Cache-Control': 'no-cache' } 
+        }).catch(() => {})
+      }
+      
+      // Mark this page as visited
+      window.sessionStorage.setItem('lastVisit', timestamp.toString())
+    }
+  }, [])
+
   return (
     <Suspense fallback={
       <DashboardLayout>

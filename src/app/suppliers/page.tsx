@@ -356,7 +356,16 @@ export default function SuppliersPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to delete supplier')
+        console.error('Delete supplier error:', error)
+        
+        // Handle specific constraint errors
+        if (error.details && (error.details.itemCount > 0 || error.details.orderCount > 0)) {
+          const constraintMsg = `Cannot delete supplier "${supplierToDelete.name}" because it has ${error.details.itemCount} associated items and ${error.details.orderCount} purchase orders. Please remove or reassign these dependencies first.`
+          toast.error(constraintMsg)
+        } else {
+          toast.error(error.error || 'Failed to delete supplier')
+        }
+        return
       }
 
       toast.success('Supplier deleted successfully')
@@ -405,14 +414,40 @@ export default function SuppliersPage() {
     
     setIsDeactivating(true)
     try {
-      // Note: This is a placeholder since the API doesn't support status changes yet
-      // In a real implementation, you would add a status field to the supplier model
-      // and create an endpoint to update the status
-      toast.success('Status change functionality will be implemented with database schema updates')
+      const newStatus = supplierToDeactivate.status === 'Active' ? 'Inactive' : 'Active'
+      
+      const response = await fetch(`/api/suppliers/${supplierToDeactivate.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: supplierToDeactivate.name,
+          email: supplierToDeactivate.email,
+          phone: supplierToDeactivate.phone,
+          address: supplierToDeactivate.address,
+          contactPerson: supplierToDeactivate.contactPerson,
+          status: newStatus
+        })
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to update supplier status'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // Fallback if JSON parsing fails
+        }
+        throw new Error(errorMessage)
+      }
+
+      toast.success(`Supplier ${newStatus.toLowerCase()} successfully`)
       setSupplierToDeactivate(null)
+      fetchSuppliers() // Refresh the list
     } catch (error) {
       console.error('Error changing supplier status:', error)
-      toast.error('Failed to change supplier status')
+      toast.error(error instanceof Error ? error.message : 'Failed to change supplier status')
     } finally {
       setIsDeactivating(false)
     }

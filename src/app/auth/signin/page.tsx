@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,7 +15,6 @@ const signInSchema = z.object({
 type SignInForm = z.infer<typeof signInSchema>
 
 export default function SignInPage() {
-  const router = useRouter()
   const { login, isLoading, error } = useAuth()
   const [sessionStatus, setSessionStatus] = useState<string>('Checking...')
 
@@ -38,7 +36,7 @@ export default function SignInPage() {
         } else {
           setSessionStatus('No active session')
         }
-      } catch (error) {
+      } catch {
         setSessionStatus('Error checking session')
       }
     }
@@ -61,6 +59,11 @@ export default function SignInPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Office Supplies Management System
           </p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="mt-1 text-center text-xs text-gray-500">
+              Session: {sessionStatus}
+            </p>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -113,10 +116,30 @@ export default function SignInPage() {
             </button>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Demo credentials: admin@example.com / admin123
-            </p>
+          <div className="text-center space-y-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-900 mb-3">Demo Credentials</h3>
+              <div className="space-y-2 text-xs text-blue-800">
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="bg-white rounded px-3 py-2 border border-blue-100">
+                    <div className="font-medium text-blue-900">Admin User</div>
+                    <div className="text-blue-700">admin@example.com / admin123</div>
+                  </div>
+                  <div className="bg-white rounded px-3 py-2 border border-blue-100">
+                    <div className="font-medium text-blue-900">Manager User</div>
+                    <div className="text-blue-700">manager@example.com / manager123</div>
+                  </div>
+                  <div className="bg-white rounded px-3 py-2 border border-blue-100">
+                    <div className="font-medium text-blue-900">Employee User</div>
+                    <div className="text-blue-700">employee@example.com / employee123</div>
+                  </div>
+                  <div className="bg-white rounded px-3 py-2 border border-blue-100">
+                    <div className="font-medium text-blue-900">General Manager</div>
+                    <div className="text-blue-700">gm@company.com / GeneralManager123!</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </form>
       </div>

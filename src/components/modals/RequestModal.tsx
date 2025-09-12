@@ -139,9 +139,11 @@ export function RequestModal({ isOpen, onClose, onSave, request, mode, readOnly 
         }))
       })
     } else {
+      // Auto-populate department from current user's session
+      const userDepartment = session?.user?.department || ''
       setFormData({
         title: '',
-        department: '',
+        department: userDepartment,
         description: '',
         expectedDelivery: '',
         priority: 'MEDIUM',
@@ -150,7 +152,7 @@ export function RequestModal({ isOpen, onClose, onSave, request, mode, readOnly 
       })
     }
     setErrors({})
-  }, [request, mode, isOpen])
+  }, [request, mode, isOpen, session])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -472,9 +474,14 @@ export function RequestModal({ isOpen, onClose, onSave, request, mode, readOnly 
     }
   }
 
+  // Filter out test departments (New Department 22, 35, 87)
+  const filteredDepartments = availableDepartments.filter(dept => 
+    !dept.name.startsWith('New Department')
+  )
+  
   const departmentOptions = [
     { value: '', label: 'Select Department' },
-    ...availableDepartments.map(dept => ({
+    ...filteredDepartments.map(dept => ({
       value: dept.name,
       label: dept.name
     }))
@@ -529,13 +536,14 @@ export function RequestModal({ isOpen, onClose, onSave, request, mode, readOnly 
           </FormField>
 
           <FormField label="Department" required error={errors.department}>
-            <Select
-              value={formData.department}
-              onChange={(e) => handleInputChange('department', e.target.value)}
-              options={departmentOptions}
+            <Input
+              type="text"
+              value={formData.department || 'Auto-detected from your profile'}
               error={!!errors.department}
-              disabled={readOnly}
+              disabled={true}
+              className="bg-gray-50 cursor-not-allowed"
             />
+            <p className="text-xs text-gray-500 mt-1">Department is automatically set based on your user profile</p>
           </FormField>
 
           <FormField label="Expected Delivery Date" error={errors.expectedDelivery}>

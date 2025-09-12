@@ -287,19 +287,32 @@ export default function AdminDashboardPage() {
 
       console.log(`📡 Making API call to /api/requests/${requestId}/approve`)
       console.log(`📦 Payload:`, { status, comments })
+      console.log(`📦 Request headers:`, {
+        'Content-Type': 'application/json'
+      })
+      console.log(`📦 Request credentials:`, 'same-origin')
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
       const response = await fetch(`/api/requests/${requestId}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Ensure cookies are included
         },
-        credentials: 'same-origin', // Ensure cookies are sent
-        body: JSON.stringify({ status, comments })
+        credentials: 'same-origin',
+        body: JSON.stringify({ status, comments }),
+        signal: controller.signal
       })
 
+      clearTimeout(timeoutId)
+
       console.log(`📡 API Response status: ${response.status}`)
+      console.log(`📡 API Response ok: ${response.ok}`)
+      console.log(`📡 API Response statusText: ${response.statusText}`)
       console.log(`📡 API Response headers:`, Object.fromEntries(response.headers.entries()))
+      console.log(`📡 API Response type: ${response.type}`)
+      console.log(`📡 API Response url: ${response.url}`)
 
       if (response.ok) {
         try {
@@ -324,8 +337,10 @@ export default function AdminDashboardPage() {
 
           console.log(`✅ Success response:`, data)
 
+          // Handle both success response formats
           if (data && typeof data === 'object') {
-            toast.success(data.message || `Request ${action}d successfully`)
+            const message = data.message || data.success || `Request ${action}d successfully`
+            toast.success(message)
             // Refresh dashboard data
             fetchDashboardData()
           } else {
@@ -340,16 +355,53 @@ export default function AdminDashboardPage() {
         try {
           const errorText = await response.text()
           console.log(`📄 Error response text:`, errorText)
+          console.log(`📄 Error response text length:`, errorText?.length || 0)
+          console.log(`📄 Error response text type:`, typeof errorText)
 
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-          } catch (parseError) {
-            console.error(`❌ Failed to parse error response:`, parseError)
-            errorData = { error: `Server error (${response.status})` }
+          let errorData: { error: string; details?: string; message?: string } = { error: `Server error (${response.status})` } // Default error structure
+          
+          if (errorText && errorText.trim()) {
+            try {
+              const parsed = JSON.parse(errorText)
+              console.log(`📄 Parsed error response:`, parsed)
+              console.log(`📄 Parsed error response type:`, typeof parsed)
+              console.log(`📄 Parsed error response keys:`, Object.keys(parsed || {}))
+              
+              // Ensure the parsed response has an error property
+              if (parsed && typeof parsed === 'object') {
+                errorData = {
+                  error: parsed.error || parsed.message || `Server error (${response.status})`,
+                  details: parsed.details || undefined,
+                  ...parsed
+                }
+                console.log(`📄 Final errorData structure:`, errorData)
+              } else {
+                console.error(`❌ Parsed response is not an object:`, parsed)
+                errorData = { error: `Invalid response format: ${JSON.stringify(parsed)}` }
+              }
+            } catch (parseError) {
+              console.error(`❌ Failed to parse error response:`, parseError)
+              console.error(`❌ Raw error text:`, errorText)
+              errorData = { error: `Invalid response format: ${errorText}` }
+            }
+          } else {
+            console.error(`❌ Empty error response received`)
+            errorData = { error: `Empty response from server (${response.status})` }
           }
 
           console.error(`❌ Error response:`, errorData)
+          console.error(`❌ Error response keys:`, Object.keys(errorData || {}))
+          console.error(`❌ Error response stringified:`, JSON.stringify(errorData))
+
+          // Safety check: ensure errorData is never completely empty
+          if (!errorData || typeof errorData !== 'object' || Object.keys(errorData).length === 0) {
+            console.error(`❌ ERROR: errorData is empty or invalid, creating fallback`)
+            errorData = { 
+              error: `Request failed with status ${response.status}`,
+              details: `Status: ${response.status}, StatusText: ${response.statusText || 'Unknown error'}`
+            }
+            console.error(`❌ Fallback errorData:`, errorData)
+          }
 
           // Handle specific error cases
           if (response.status === 401) {
@@ -358,19 +410,34 @@ export default function AdminDashboardPage() {
           } else if (response.status === 403) {
             toast.error('You do not have permission to perform this action.')
           } else {
-            toast.error(errorData.error || `Failed to ${action} request`)
+            // Ensure we have a valid error message
+            const errorMessage = errorData?.error || errorData?.message || `Failed to ${action} request`
+            console.log(`💬 Toast error message:`, errorMessage)
+            toast.error(errorMessage)
           }
         } catch (errorResponseError) {
           console.error(`❌ Error reading error response:`, errorResponseError)
-          toast.error(`Failed to ${action} request`)
+          toast.error(`Network error: Failed to ${action} request`)
         }
       }
     } catch (error) {
       console.error('❌ Error processing approval:', error)
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      
+      // Enhanced error logging
+      const errorObj = error as Error | { name?: string; message?: string; stack?: string; cause?: unknown }
+      console.error('❌ Error details:', {
+        name: errorObj?.name,
+        message: errorObj?.message,
+        stack: errorObj?.stack,
+        cause: errorObj?.cause
+      })
+      
+      if (error instanceof TypeError && error.message?.includes('Failed to fetch')) {
         toast.error('Network error. Please check your connection and try again.')
+      } else if (errorObj?.name === 'AbortError') {
+        toast.error('Request timed out. Please try again.')
       } else {
-        toast.error(`An error occurred while processing the ${action}`)
+        toast.error(`An error occurred while processing the ${action}: ${errorObj?.message || 'Unknown error'}`)
       }
     }
   }
