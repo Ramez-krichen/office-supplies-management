@@ -1,12 +1,41 @@
 # Office Supplies Management System
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.3.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.0.0-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.13.0-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.15.0-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4+-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
 
 A production-ready, enterprise-grade web application for comprehensive office supplies management. Built with modern technologies to streamline procurement processes, enhance operational efficiency, and provide real-time insights into organizational spending patterns.
+
+## 🔄 Recent Updates
+
+### Version 1.0.0 - September 2025
+
+**New Features:**
+- ✅ **Enhanced Security**: Implemented comprehensive role-based access control
+- ✅ **Advanced Analytics**: Added demand forecasting and spending analytics
+- ✅ **Mobile Optimization**: Fully responsive design for all devices
+- ✅ **Email Notifications**: Automated notification system for workflow events
+- ✅ **Audit Trail**: Complete activity logging for compliance requirements
+- ✅ **Returns Management**: Comprehensive return processing system
+- ✅ **Supplier Auto-categorization**: Dynamic supplier category detection
+- ✅ **Manager Assignment**: Automatic manager assignment system
+- ✅ **Password Reset**: Secure email-based password reset functionality
+
+**Improvements:**
+- 🚀 **Performance**: Optimized database queries and indexing
+- 🔧 **Code Quality**: Enhanced TypeScript types and validation
+- 📱 **User Experience**: Improved UI/UX with modern design patterns
+- 🛡️ **Security**: Advanced security measures and input validation
+- 📊 **Reporting**: Enhanced quick reports and dashboard analytics
+
+**Technical Updates:**
+- Updated to Next.js 15.5.2 with App Router
+- Upgraded to React 19.0.0 for improved performance
+- Enhanced Prisma ORM with optimized schema
+- Comprehensive test suite with 100+ scenarios
+- Production-ready deployment configuration
 
 ## ✨ Key Features
 
@@ -36,14 +65,18 @@ A production-ready, enterprise-grade web application for comprehensive office su
 
 ### 🔒 Security & Performance
 - **Enterprise Security**: JWT authentication, bcrypt password hashing, and SQL injection protection
+- **Role-Based Access Control**: Fine-grained permissions with ADMIN, MANAGER, EMPLOYEE, GENERAL_MANAGER roles
+- **Secure Password Reset**: Email-based password reset with token validation and expiration
+- **Input Validation**: Comprehensive Zod schema validation on both client and server side
 - **WCAG 2.1 AA Compliance**: Full accessibility support with keyboard navigation and screen reader compatibility
 - **Mobile-First Design**: Responsive UI optimized for all devices with touch-friendly navigation
 - **Performance Optimized**: Database indexing, query optimization, and bundle optimization
+- **Audit Trail**: Comprehensive activity logging for regulatory compliance
 
 ## 🛠️ Technology Stack
 
 ### Frontend
-- **Framework**: Next.js 15.3.3 with App Router
+- **Framework**: Next.js 15.5.2 with App Router
 - **UI Library**: React 19.0.0 with TypeScript 5.0+
 - **Styling**: Tailwind CSS 3.4+ with custom components
 - **UI Components**: Radix UI, Headless UI, Lucide React icons
@@ -53,9 +86,11 @@ A production-ready, enterprise-grade web application for comprehensive office su
 ### Backend
 - **Runtime**: Node.js with Next.js API Routes
 - **Database**: SQLite (development) / PostgreSQL (production-ready)
-- **ORM**: Prisma 6.13.0 with advanced query optimization
-- **Authentication**: NextAuth.js 4.24+ with JWT and session management
+- **ORM**: Prisma 6.15.0 with advanced query optimization
+- **Authentication**: NextAuth.js 4.24.11 with JWT and session management
 - **Validation**: Zod schemas for type-safe API validation
+- **Password Security**: bcryptjs for secure password hashing
+- **Email Integration**: Nodemailer for notification system
 
 ### Development & Deployment
 - **Language**: TypeScript with strict type checking
@@ -77,7 +112,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/your-username/office-supplies-management.git
 cd office-supplies-management
 ```
 
@@ -131,15 +166,17 @@ The system comes pre-loaded with demo accounts for immediate testing:
 ### Additional Test Data
 
 The seeded database includes:
-- **61 Users** across different roles and departments
-- **38 Items** with realistic pricing and stock levels
-- **10 Suppliers** with complete contact information
-- **760 Requests** spanning 10 years for workflow testing
-- **455 Purchase Orders** with supplier relationships
-- **2000+ Stock Movements** for inventory tracking
-- **500+ Returns** with various processing scenarios
-- **720 Demand Forecasts** for planning analysis
-- **1000+ Audit Logs** for compliance demonstration
+- **61+ Users** across different roles and departments with realistic profiles
+- **38+ Items** with realistic pricing, stock levels, and category classifications
+- **10+ Suppliers** with complete contact information and automatic category detection
+- **760+ Requests** spanning multiple years for comprehensive workflow testing
+- **455+ Purchase Orders** with complete supplier relationships and approval workflows
+- **2000+ Stock Movements** for detailed inventory tracking and analytics
+- **500+ Returns** with various processing scenarios and reason tracking
+- **720+ Demand Forecasts** for advanced planning and analytics
+- **1000+ Audit Logs** for comprehensive compliance demonstration
+- **Multiple Departments** with hierarchical structure and manager assignments
+- **Notification System** with 500+ test notifications across different types
 
 ## 📁 Project Structure
 
@@ -257,11 +294,15 @@ npm run start            # Start production server
 npm run lint             # Run ESLint with Next.js configuration
 
 # Database Management
-npm run db:seed          # Seed with comprehensive test data (10 years)
-npm run db:fixed-seed    # Seed with fixed, consistent test data
-npm run db:reset         # Reset database and reseed with fresh data
-npm run db:fixed-reset   # Reset with fixed seed data
-npm run db:cleanup-admins # Clean up duplicate admin users
+npm run db:seed                    # Seed with comprehensive test data
+npm run db:simple-seed             # Seed with basic test data
+npm run db:fixed-seed              # Seed with fixed, consistent test data
+npm run db:generate-historical     # Generate historical data for analytics
+npm run db:generate-sample         # Generate sample data for testing
+npm run db:generate-comprehensive  # Generate comprehensive test dataset
+npm run db:reset                   # Reset database and reseed with fresh data
+npm run db:fixed-reset             # Reset with fixed seed data
+npm run db:cleanup-admins          # Clean up duplicate admin users
 
 # Database Tools
 npx prisma studio        # Open Prisma Studio (database GUI)
@@ -380,6 +421,16 @@ Industry-standard UML diagrams created with draw.io are available in the `docs/u
 - **[🧪 Comprehensive Test Report](COMPREHENSIVE_TEST_REPORT.md)**: Detailed testing results and validation
 - **[🔑 Access Control Documentation](ACCESS_CONTROL_DOCUMENTATION.md)**: Security implementation details
 
+### Security & Implementation Guides
+
+- **[🔐 Access Control Testing](ACCESS_CONTROL_TESTING.md)**: Security testing procedures and validation
+- **[🔒 Secure Password Reset](SECURE_PASSWORD_RESET_DOCUMENTATION.md)**: Password reset system documentation
+- **[📢 Notification System](NOTIFICATION_SYSTEM_DOCUMENTATION.md)**: Email notification system guide
+- **[🏢 Manager Assignment](ENHANCED_MANAGER_ASSIGNMENT_DOCUMENTATION.md)**: Automatic manager assignment system
+- **[🏪 Supplier Categories](DYNAMIC_SUPPLIER_CATEGORY_AUTO_DETECTION.md)**: Dynamic supplier categorization system
+- **[📊 Department Filtering](DEPARTMENT_FILTERING_IMPLEMENTATION.md)**: Department-based filtering implementation
+- **[👤 User Credentials Guide](USER_CREDENTIALS_AND_TROUBLESHOOTING.md)**: User management and troubleshooting
+
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these steps:
@@ -444,24 +495,39 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### 🚀 Phase 3: Future Enhancements
 
 - [ ] **Advanced Analytics**: Interactive charts and graphs with drill-down capabilities
-- [ ] **Email Notifications**: Automated alerts for approvals, low stock, and deadlines
+- [x] **Email Notifications**: Automated alerts for approvals, low stock, and deadlines (Implemented)
 - [ ] **File Management**: Document upload and attachment system
 - [ ] **Mobile Application**: Native iOS and Android applications
 - [ ] **ERP Integration**: API connectors for popular ERP systems
 - [ ] **Workflow Automation**: Advanced approval workflows with conditional logic
 - [ ] **AI-Powered Insights**: Machine learning for spending optimization
 - [ ] **Multi-language Support**: Internationalization for global deployment
+- [x] **Supplier Category Auto-Detection**: Dynamic supplier categorization (Implemented)
+- [x] **Enhanced Manager Assignment**: Automatic manager assignment system (Implemented)
+- [x] **Secure Password Reset**: Email-based password reset functionality (Implemented)
 
 ---
 
 ## 🏆 Project Status
 
-**Current Version**: 0.1.0
+**Current Version**: 1.0.0
 **Status**: Production Ready
-**Last Updated**: August 2025
+**Last Updated**: September 2025
 **Test Coverage**: Comprehensive (100+ test scenarios)
 **Performance**: Optimized for enterprise use
 **Security**: Enterprise-grade with audit compliance
+**Database**: SQLite (development) / PostgreSQL (production)
+**Authentication**: JWT with NextAuth.js 4.24.11
+**Notifications**: Email-based system with Nodemailer integration
+
+---
+
+
+
+*Developed during Summer 2025 Internship Program*
+**Database**: SQLite (development) / PostgreSQL (production)
+**Authentication**: JWT with NextAuth.js 4.24.11
+**Notifications**: Email-based system with Nodemailer integration
 
 ---
 

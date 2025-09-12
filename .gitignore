@@ -44,3 +44,104 @@ next-env.d.ts
 
 # YoYo AI version control directory
 .yoyo/
+
+# Database files
+*.db
+*.sqlite
+prisma/dev.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+.log
+
+# Test files and scripts (development only)
+test-*.js
+test-*.ts
+test-*.html
+test-*.mjs
+debug-*.js
+debug-*.ts
+fix-*.js
+fix-*.ts
+verify-*.js
+verify-*.ts
+check-*.js
+check-*.ts
+generate-*.js
+generate-*.ts
+manual-*.js
+create-*.js
+setup-*.js
+simple-*.js
+quick-*.js
+quick-*.ts
+run-*.js
+boost-*.js
+capture-*.js
+convert-*.js
+*.bat
+*.py
+*.R
+*.txt
+*.csv
+*.sql
+*.html (except in public/)
+*.md (except README.md and docs/)
+
+# Temporary directories
+/temp/
+/.venv/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Python files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Documentation exceptions (allow these)
+!README.md
+!docs/**/*.md
+!prisma/schema.prisma
+!scripts/seed.ts
+!scripts/requirements.txt
+
+# Package manager files
+yarn.lock
+pnpm-lock.yaml
+
+# Qoder IDE
+.qodo/
