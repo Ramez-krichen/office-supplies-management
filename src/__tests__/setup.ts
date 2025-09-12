@@ -1,30 +1,16 @@
-import '@testing-library/jest-dom'
+// Jest setup for Node.js environment (API tests)
+// Mock global functions that might be referenced in utility code
 
-// Mock IntersectionObserver
+// Mock IntersectionObserver for Node.js environment
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
   observe: jest.fn(),
   unobserve: jest.fn(),
 }))
 
-// Mock ResizeObserver
+// Mock ResizeObserver for Node.js environment
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
   observe: jest.fn(),
   unobserve: jest.fn(),
 }))
-
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-})
